@@ -1,42 +1,51 @@
-﻿using System;
+﻿using HoudiniSafe.ViewModel.Services;
+using HoudiniSafe.ViewModel.Commands;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using System.Windows;
-using System.Threading.Tasks;
 using System.IO;
 using Microsoft.Win32;
-using HoudiniSafe.ViewModel.Commands;
-using HoudiniSafe.Viewmodel.Services;
 using HoudiniSafe.View;
+using HoudiniSafe.Viewmodel.Services;
+using Microsoft.WindowsAPICodePack.Dialogs;
 
 namespace HoudiniSafe.ViewModel
 {
     public class MainViewViewModel : ViewModelBase
     {
         private readonly EncryptionService _encryptionService;
-
+        private readonly DialogService _dialogService;
         private ObservableCollection<string> _droppedFiles;
+        private double _progressValue;
+        private Visibility _progressVisibility = Visibility.Collapsed;
+        private bool _replaceOriginal;
+
         public ObservableCollection<string> DroppedFiles
         {
             get => _droppedFiles;
-            set => SetProperty(ref _droppedFiles, value);
+            set
+            {
+                if (SetProperty(ref _droppedFiles, value))
+                {
+                    // Aktualisiere abhängige Eigenschaften, wenn sich die DroppedFiles ändern
+                    OnPropertyChanged(nameof(CanEncrypt));
+                    OnPropertyChanged(nameof(CanDecrypt));
+                }
+            }
         }
 
-        private double _progressValue;
         public double ProgressValue
         {
             get => _progressValue;
             set => SetProperty(ref _progressValue, value);
         }
 
-        private Visibility _progressVisibility = Visibility.Collapsed;
         public Visibility ProgressVisibility
         {
             get => _progressVisibility;
             set => SetProperty(ref _progressVisibility, value);
         }
 
-        private bool _replaceOriginal;
         public bool ReplaceOriginal
         {
             get => _replaceOriginal;
@@ -52,9 +61,13 @@ namespace HoudiniSafe.ViewModel
         public ICommand RemoveFileCommand { get; }
         public ICommand RemoveAllFilesCommand { get; }
 
+        public bool CanEncrypt => DroppedFiles != null && DroppedFiles.Count > 0 && DroppedFiles.All(file => !file.EndsWith(".enc"));
+        public bool CanDecrypt => DroppedFiles != null && DroppedFiles.Count > 0 && DroppedFiles.All(file => file.EndsWith(".enc"));
+
         public MainViewViewModel()
         {
             _encryptionService = new EncryptionService();
+            _dialogService = new DialogService();
             DroppedFiles = new ObservableCollection<string>();
             RemoveFileCommand = new RelayCommand<string>(RemoveFile);
             RemoveAllFilesCommand = new RelayCommand(RemoveAllFiles);
@@ -82,7 +95,7 @@ namespace HoudiniSafe.ViewModel
 
         private void ShowAbout()
         {
-            MessageBox.Show("HoudiniSafe - Sicheres Verschlüsselungstool", "Über", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowPopup("HoudiniSafe - Sicheres Verschlüsselungstool", "Über");
         }
 
         private void HandleDrop(DragEventArgs e)
@@ -102,6 +115,8 @@ namespace HoudiniSafe.ViewModel
             if (!DroppedFiles.Contains(filePath))
             {
                 DroppedFiles.Add(filePath);
+                OnPropertyChanged(nameof(CanEncrypt));
+                OnPropertyChanged(nameof(CanDecrypt));
             }
         }
 
@@ -110,19 +125,23 @@ namespace HoudiniSafe.ViewModel
             if (DroppedFiles.Contains(file))
             {
                 DroppedFiles.Remove(file);
+                OnPropertyChanged(nameof(CanEncrypt));
+                OnPropertyChanged(nameof(CanDecrypt));
             }
         }
 
         private void RemoveAllFiles()
         {
             DroppedFiles.Clear();
+            OnPropertyChanged(nameof(CanEncrypt));
+            OnPropertyChanged(nameof(CanDecrypt));
         }
 
         private async Task EncryptAsync()
         {
             if (DroppedFiles.Count == 0)
             {
-                MessageBox.Show("Bitte wählen Sie mindestens eine Datei oder einen Ordner aus.", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowPopup("Bitte wählen Sie mindestens eine Datei oder einen Ordner aus.", "Fehler");
                 return;
             }
 
@@ -156,12 +175,12 @@ namespace HoudiniSafe.ViewModel
                     await _encryptionService.EncryptMultipleFilesAsync(DroppedFiles.ToArray(), outputFile, password, progress, ReplaceOriginal);
                 }
 
-                MessageBox.Show("Verschlüsselung erfolgreich abgeschlossen.", "Erfolg", MessageBoxButton.OK, MessageBoxImage.Information);
+                _dialogService.ShowPopup("Verschlüsselung erfolgreich abgeschlossen.", "Erfolg", "EncryptIcon");
                 DroppedFiles.Clear();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Fehler bei der Verschlüsselung: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowPopup($"Fehler bei der Verschlüsselung: {ex.Message}", "Fehler");
             }
             finally
             {
@@ -173,7 +192,7 @@ namespace HoudiniSafe.ViewModel
         {
             if (DroppedFiles.Count != 1)
             {
-                MessageBox.Show("Bitte wählen Sie genau eine verschlüsselte Datei aus.", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowPopup("Bitte wählen Sie genau eine verschlüsselte Datei aus.", "Fehler");
                 return;
             }
 
@@ -191,12 +210,12 @@ namespace HoudiniSafe.ViewModel
             try
             {
                 await _encryptionService.DecryptFileAsync(DroppedFiles[0], outputFile, password, progress, ReplaceOriginal);
-                MessageBox.Show("Entschlüsselung erfolgreich abgeschlossen.", "Erfolg", MessageBoxButton.OK, MessageBoxImage.Information);
+                _dialogService.ShowPopup("Entschlüsselung erfolgreich abgeschlossen.", "Erfolg", "DecryptIcon");
                 DroppedFiles.Clear();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Fehler bei der Entschlüsselung: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowPopup($"Fehler bei der Entschlüsselung: {ex.Message}", "Fehler");
             }
             finally
             {
@@ -206,15 +225,18 @@ namespace HoudiniSafe.ViewModel
 
         private string GetSaveFilePath()
         {
-            var saveFileDialog = new SaveFileDialog
+            var dialog = new CommonOpenFileDialog
             {
-                Filter = "Verschlüsselte Dateien (*.enc)|*.enc|Alle Dateien (*.*)|*.*",
-                DefaultExt = ".enc",
-                AddExtension = true,
-                Title = "Speicherort wählen"
+                IsFolderPicker = true, // Nur Ordner auswählen
+                Title = "Wählen Sie den Speicherort aus"
             };
 
-            return saveFileDialog.ShowDialog() == true ? saveFileDialog.FileName : null;
+            if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
+            {
+                return dialog.FileName; // Gibt den ausgewählten Ordnerpfad zurück
+            }
+
+            return null;
         }
 
         private string ShowPasswordDialog(string title)

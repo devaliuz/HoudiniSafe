@@ -6,15 +6,23 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="Styles/Colors.xaml"/>
-                <ResourceDictionary Source="Styles/WindowStyle.xaml"/>
-                <ResourceDictionary Source="Styles/ButtonStyle.xaml"/>
-                <ResourceDictionary Source="Styles/OtherStyles.xaml"/>
-                <ResourceDictionary Source="Styles/ModernPasswordBoxStyle.xaml"/>
+                <!--Styles-->
+                <ResourceDictionary Source="Ressources/Styles/Colors.xaml"/>
+                <ResourceDictionary Source="Ressources/Styles/WindowStyle.xaml"/>
+                <ResourceDictionary Source="Ressources/Styles/ButtonStyle.xaml"/>
+                <ResourceDictionary Source="Ressources/Styles/OtherStyles.xaml"/>
+                <ResourceDictionary Source="Ressources/Styles/ModernPasswordBoxStyle.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+            
+            <!--Converters-->
             <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
             <converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
             <converters:FilePathToNameConverter x:Key="FilePathToNameConverter"/>
+            <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+
+            <!--Images-->
+            <BitmapImage x:Key="EncryptIcon" UriSource="/Ressources/Icons/locked.png"/>
+            <BitmapImage x:Key="DecryptIcon" UriSource="/Ressources/Icons/open.png"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

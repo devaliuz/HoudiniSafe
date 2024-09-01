@@ -103,22 +103,27 @@
                 <Button Content="Öffnen" 
                         Command="{Binding OpenFileCommand}" 
                         Style="{StaticResource ModernButtonStyle}"
-                        Margin="0,0,10,0"/>
+                        Margin="0,0,5,0"/>
                 <Button Content="Verschlüsseln" 
                         Command="{Binding EncryptCommand}" 
                         Style="{StaticResource ModernButtonStyle}"
-                        Margin="0,0,10,0"/>
+                        Margin="0,0,5,0"
+                        IsEnabled="{Binding CanEncrypt}">
+
+                </Button>
                 <Button Content="Entschlüsseln" 
                         Command="{Binding DecryptCommand}" 
                         Style="{StaticResource ModernButtonStyle}"
-                        Margin="0,0,10,0"/>
+                        Margin="0,0,5,0"
+                        IsEnabled="{Binding CanDecrypt}"/>
                 <Button Content="Über" 
                         Command="{Binding AboutCommand}" 
                         Style="{StaticResource ModernButtonStyle}"
-                        Margin="0,0,10,0"/>
+                        Margin="0,0,5,0"/>
                 <Button Content="Beenden" 
                         Command="{Binding ExitCommand}" 
-                        Style="{StaticResource ModernButtonStyle}"/>
+                        Style="{StaticResource ModernButtonStyle}"
+                        Margin="0,0,10,0"/>
             </StackPanel>
         </StackPanel>
     </Grid>

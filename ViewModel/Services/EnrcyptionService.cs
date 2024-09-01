@@ -18,7 +18,9 @@ namespace HoudiniSafe.Viewmodel.Services
         public async Task EncryptFileAsync(string inputFile, string outputFile, string password, IProgress<double> progress, bool replaceOriginal = false)
         {
             string tempOutputFile = Path.GetTempFileName();
-            string finalOutputFile = outputFile + EncryptedExtension;
+
+            // Determine finalOutputFile without changing the name
+            string finalOutputFile = replaceOriginal ? outputFile + EncryptedExtension : Path.Combine(outputFile, Path.GetFileName(inputFile) + EncryptedExtension);
 
             try
             {
@@ -70,13 +72,11 @@ namespace HoudiniSafe.Viewmodel.Services
             if (replaceOriginal)
             {
                 File.Delete(inputFile);
-                File.Move(tempOutputFile, finalOutputFile);
             }
-            else
-            {
-                File.Move(tempOutputFile, finalOutputFile, true);
-            }
+
+            File.Move(tempOutputFile, finalOutputFile, true);
         }
+
 
         public async Task DecryptFileAsync(string inputFile, string outputFile, string password, IProgress<double> progress, bool replaceOriginal = false)
         {
@@ -108,23 +108,10 @@ namespace HoudiniSafe.Viewmodel.Services
                 aes.Key = key.GetBytes(aes.KeySize / 8);
                 aes.IV = key.GetBytes(aes.BlockSize / 8);
 
-                if (replaceOriginal)
-                {
-                    finalOutputFile = Path.Combine(
-                        Path.GetDirectoryName(inputFile),
-                        Path.GetFileNameWithoutExtension(inputFile));
-
-                    // Remove .enc if it exists
-                    if (finalOutputFile.EndsWith(EncryptedExtension, StringComparison.OrdinalIgnoreCase))
-                    {
-                        finalOutputFile = finalOutputFile.Substring(0, finalOutputFile.Length - EncryptedExtension.Length);
-                    }
-                }
-                else
-                {
-                    finalOutputFile = Path.Combine(Path.GetDirectoryName(outputFile),
-                                        Path.GetFileNameWithoutExtension(originalFilename));
-                }
+                // Determine finalOutputFile without changing the name
+                finalOutputFile = replaceOriginal
+                    ? Path.Combine(Path.GetDirectoryName(inputFile), Path.GetFileNameWithoutExtension(inputFile))
+                    : Path.Combine(outputFile, originalFilename);
 
                 using var outputFileStream = new FileStream(tempOutputFile, FileMode.Create, FileAccess.Write, FileShare.None, BufferSize, true);
                 using var cryptoStream = new CryptoStream(inputFileStream, aes.CreateDecryptor(), CryptoStreamMode.Read);
@@ -150,13 +137,11 @@ namespace HoudiniSafe.Viewmodel.Services
             if (replaceOriginal)
             {
                 File.Delete(inputFile);
-                File.Move(tempOutputFile, finalOutputFile);
             }
-            else
-            {
-                File.Move(tempOutputFile, finalOutputFile, true);
-            }
+
+            File.Move(tempOutputFile, finalOutputFile, true);
         }
+
 
         public async Task EncryptFolderAsync(string inputFolder, string outputFile, string password, IProgress<double> progress, bool replaceOriginal = false)
         {
