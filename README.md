@@ -1,7 +1,3 @@
-Sure, here’s a draft for a `README.md` file that introduces your project, describes its capabilities, and provides usage instructions. Feel free to adjust the content to better fit the specifics of your project.
-
----
-
 # HoudiniSafe
 
 **HoudiniSafe** is a secure file encryption and decryption tool designed to help users protect their sensitive files and folders. With a user-friendly interface and powerful encryption algorithms, HoudiniSafe ensures that your data remains confidential and secure.
