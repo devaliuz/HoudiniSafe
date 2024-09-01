@@ -25,7 +25,7 @@ To get started with HoudiniSafe, follow these instructions:
 1. **Clone the Repository**
 
    ```sh
-   git clone https://github.com/yourusername/houdinisafe.git
+   git clone https://github.com/devaliuz/houdinisafe.git
    ```
 
 2. **Open the Project**
