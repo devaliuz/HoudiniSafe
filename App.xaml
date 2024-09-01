@@ -21,8 +21,8 @@
             <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
 
             <!--Images-->
-            <BitmapImage x:Key="EncryptIcon" UriSource="/Ressources/Icons/locked.png"/>
-            <BitmapImage x:Key="DecryptIcon" UriSource="/Ressources/Icons/open.png"/>
+            <BitmapImage x:Key="EncryptIcon" UriSource="pack://application:,,,/Ressources/Icons/locked.png"/>
+            <BitmapImage x:Key="DecryptIcon" UriSource="pack://application:,,,/Ressources/Icons/open.png"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

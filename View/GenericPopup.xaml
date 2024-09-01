@@ -15,18 +15,19 @@
             CornerRadius="10"
             Padding="20">
         <StackPanel>
-            <Image Source="{Binding Icon}"
-                   Width="15"
-                   Height="15"
-                   HorizontalAlignment="Center"
-                   Margin="10"
-                   Visibility="{Binding Icon, Converter={StaticResource NullToVisibilityConverter}}"/>
             <TextBlock Text="{Binding Message}"
                        Foreground="{StaticResource PrimaryTextBrush}"
                        FontSize="16"
                        Margin="0,0,0,10"
                        TextWrapping="Wrap" />
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <StackPanel Orientation="Horizontal" 
+                        HorizontalAlignment="Center">
+                <Image Source="{Binding Icon}"
+                       Width="50"
+                       Height="50"
+                       HorizontalAlignment="Center"
+                       Margin="10"
+                       Visibility="{Binding Icon, Converter={StaticResource NullToVisibilityConverter}}"/>
                 <Button Content="OK"
                         Style="{StaticResource ModernButtonStyle}"
                         Command="{Binding OKCommand}" />
