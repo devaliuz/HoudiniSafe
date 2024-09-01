@@ -1,0 +1,43 @@
+classDiagram
+    class ViewModelBase {
+        <<abstract>>
+        +OnPropertyChanged()
+        +SetProperty()
+    }
+    class MainViewViewModel {
+        -EncryptionService
+        -DialogService
+        +DroppedFiles
+        +ProgressValue
+        +ProgressVisibility
+        +ReplaceOriginal
+        +EncryptCommand
+        +DecryptCommand
+        +DropCommand
+    }
+    class PasswordDialogViewModel {
+        +Title
+        +Password
+        +OkCommand
+    }
+    class GenericPopupViewModel {
+        +Message
+        +Icon
+        +OKCommand
+        +CloseAction
+    }
+    class MainView {
+        +DataContext: MainViewViewModel
+    }
+    class PasswordDialogView {
+        +DataContext: PasswordDialogViewModel
+    }
+    class GenericPopup {
+        +DataContext: GenericPopupViewModel
+    }
+    ViewModelBase <|-- MainViewViewModel
+    ViewModelBase <|-- PasswordDialogViewModel
+    ViewModelBase <|-- GenericPopupViewModel
+    MainViewViewModel -- MainView
+    PasswordDialogViewModel -- PasswordDialogView
+    GenericPopupViewModel -- GenericPopup
