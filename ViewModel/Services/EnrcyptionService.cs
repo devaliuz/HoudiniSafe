@@ -4,13 +4,15 @@ using System.Security.Cryptography;
 using System.IO.Compression;
 using System.Text;
 using System.Threading.Tasks;
+using System.Security;
+using System.Runtime.InteropServices;
 
 namespace HoudiniSafe.ViewModel.Services
 {
     /// <summary>
-    /// Provides encryption and decryption services for files and folders.
+    /// Provides encryption and decryption services for files and folders with improved memory management.
     /// </summary>
-    public class EncryptionService
+    public class EncryptionService : IDisposable
     {
         #region Constants
 
@@ -19,6 +21,13 @@ namespace HoudiniSafe.ViewModel.Services
         private const int Iterations = 100000;
         private const int BufferSize = 81920; // 80 KB
         private const string EncryptedExtension = ".enc";
+
+        #endregion
+
+        #region Fields
+
+        private byte[] _tempKey;
+        private bool _disposed = false;
 
         #endregion
 
@@ -41,27 +50,45 @@ namespace HoudiniSafe.ViewModel.Services
 
             try
             {
-                byte[] salt = GenerateRandomBytes(32);
-                byte[] iv = GenerateRandomBytes(16);
+                using (var securePassword = new SecureString())
+                {
+                    foreach (char c in password)
+                    {
+                        securePassword.AppendChar(c);
+                    }
+                    securePassword.MakeReadOnly();
 
-                using var deriveBytes = new Rfc2898DeriveBytes(password, salt, Iterations, HashAlgorithmName.SHA256);
-                byte[] key = deriveBytes.GetBytes(KeySize / 8);
+                    byte[] salt = GenerateRandomBytes(32);
+                    byte[] iv = GenerateRandomBytes(16);
 
-                using var aes = CreateAesInstance();
-                using var inputFileStream = CreateFileStream(inputFile, FileMode.Open, FileAccess.Read);
-                using var outputFileStream = CreateFileStream(tempOutputFile, FileMode.Create, FileAccess.Write);
+                    using (var deriveBytes = new Rfc2898DeriveBytes(Marshal.PtrToStringUni(Marshal.SecureStringToBSTR(securePassword)), salt, Iterations, HashAlgorithmName.SHA256))
+                    {
+                        _tempKey = deriveBytes.GetBytes(KeySize / 8);
 
-                await WriteEncryptionHeaderAsync(outputFileStream, salt, iv, inputFileName);
+                        using (var aes = CreateAesInstance())
+                        using (var inputFileStream = CreateFileStream(inputFile, FileMode.Open, FileAccess.Read))
+                        using (var outputFileStream = CreateFileStream(tempOutputFile, FileMode.Create, FileAccess.Write))
+                        {
+                            await WriteEncryptionHeaderAsync(outputFileStream, salt, iv, inputFileName);
 
-                using var encryptor = aes.CreateEncryptor(key, iv);
-                using var cryptoStream = new CryptoStream(outputFileStream, encryptor, CryptoStreamMode.Write);
-
-                await EncryptContentAsync(inputFileStream, cryptoStream, progress);
+                            using (var encryptor = aes.CreateEncryptor(_tempKey, iv))
+                            using (var cryptoStream = new CryptoStream(outputFileStream, encryptor, CryptoStreamMode.Write))
+                            {
+                                await EncryptContentAsync(inputFileStream, cryptoStream, progress);
+                            }
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {
                 File.Delete(tempOutputFile);
                 throw new Exception($"Encryption error: {ex.Message}", ex);
+            }
+            finally
+            {
+                ClearSensitiveData(_tempKey);
+                _tempKey = null;
             }
 
             FinalizeEncryption(inputFile, finalOutputFile, tempOutputFile, replaceOriginal);
@@ -83,33 +110,44 @@ namespace HoudiniSafe.ViewModel.Services
 
             try
             {
-                using var inputFileStream = CreateFileStream(inputFile, FileMode.Open, FileAccess.Read);
-
-                // Read salt and IV
-                byte[] salt = new byte[32];
-                byte[] iv = new byte[16];
-                await inputFileStream.ReadAsync(salt, 0, salt.Length);
-                await inputFileStream.ReadAsync(iv, 0, iv.Length);
-
-                // Read metadata
-                string metadata = await ReadMetadataAsync(inputFileStream);
-                string[] parts = metadata.Split('|');
-                if (parts.Length != 2)
+                using (var securePassword = new SecureString())
                 {
-                    throw new Exception("Invalid metadata format.");
+                    foreach (char c in password)
+                    {
+                        securePassword.AppendChar(c);
+                    }
+                    securePassword.MakeReadOnly();
+
+                    using (var inputFileStream = CreateFileStream(inputFile, FileMode.Open, FileAccess.Read))
+                    {
+                        byte[] salt = new byte[32];
+                        byte[] iv = new byte[16];
+                        await inputFileStream.ReadAsync(salt, 0, salt.Length);
+                        await inputFileStream.ReadAsync(iv, 0, iv.Length);
+
+                        string metadata = await ReadMetadataAsync(inputFileStream);
+                        string[] parts = metadata.Split('|');
+                        if (parts.Length != 2)
+                        {
+                            throw new Exception("Invalid metadata format.");
+                        }
+                        string originalFilename = parts[0];
+                        finalOutputFile = Path.Combine(outputFolder, originalFilename);
+
+                        using (var deriveBytes = new Rfc2898DeriveBytes(Marshal.PtrToStringUni(Marshal.SecureStringToBSTR(securePassword)), salt, Iterations, HashAlgorithmName.SHA256))
+                        {
+                            _tempKey = deriveBytes.GetBytes(KeySize / 8);
+
+                            using (var aes = CreateAesInstance())
+                            using (var decryptor = aes.CreateDecryptor(_tempKey, iv))
+                            using (var cryptoStream = new CryptoStream(inputFileStream, decryptor, CryptoStreamMode.Read))
+                            using (var outputFileStream = CreateFileStream(tempOutputFile, FileMode.Create, FileAccess.Write))
+                            {
+                                await DecryptContentAsync(cryptoStream, outputFileStream, inputFile, progress);
+                            }
+                        }
+                    }
                 }
-                string originalFilename = parts[0];
-                finalOutputFile = Path.Combine(outputFolder, originalFilename);
-
-                using var deriveBytes = new Rfc2898DeriveBytes(password, salt, Iterations, HashAlgorithmName.SHA256);
-                byte[] key = deriveBytes.GetBytes(KeySize / 8);
-
-                using var aes = CreateAesInstance();
-                using var decryptor = aes.CreateDecryptor(key, iv);
-                using var cryptoStream = new CryptoStream(inputFileStream, decryptor, CryptoStreamMode.Read);
-                using var outputFileStream = CreateFileStream(tempOutputFile, FileMode.Create, FileAccess.Write);
-
-                await DecryptContentAsync(cryptoStream, outputFileStream, inputFile, progress);
             }
             catch (CryptographicException ex)
             {
@@ -120,6 +158,11 @@ namespace HoudiniSafe.ViewModel.Services
             {
                 File.Delete(tempOutputFile);
                 throw new Exception($"Decryption error: {ex.Message}", ex);
+            }
+            finally
+            {
+                ClearSensitiveData(_tempKey);
+                _tempKey = null;
             }
 
             FinalizeDecryption(inputFile, finalOutputFile, tempOutputFile, replaceOriginal);
@@ -211,6 +254,15 @@ namespace HoudiniSafe.ViewModel.Services
                     File.Delete(file);
                 }
             }
+        }
+
+        /// <summary>
+        /// Disposes of resources used by the EncryptionService.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         #endregion
@@ -317,38 +369,6 @@ namespace HoudiniSafe.ViewModel.Services
 
             Directory.CreateDirectory(Path.GetDirectoryName(finalOutputFile));
             File.Move(tempOutputFile, finalOutputFile, true);
-        }
-
-        /// <summary>
-        /// Prepares for decryption by reading the encryption header.
-        /// </summary>
-        /// <param name="inputFile">Input file path.</param>
-        /// <param name="outputFolder">Output folder path.</param>
-        /// <param name="password">Decryption password.</param>
-        /// <returns>A tuple containing the final output file path, key, and IV.</returns>
-        private async Task<(string finalOutputFile, byte[] key, byte[] iv)> PrepareDecryptionAsync(string inputFile, string outputFolder, string password)
-        {
-            using var inputFileStream = CreateFileStream(inputFile, FileMode.Open, FileAccess.Read);
-
-            byte[] salt = new byte[32];
-            byte[] iv = new byte[16];
-            await inputFileStream.ReadAsync(salt, 0, salt.Length);
-            await inputFileStream.ReadAsync(iv, 0, iv.Length);
-
-            string metadata = await ReadMetadataAsync(inputFileStream);
-            string[] parts = metadata.Split('|');
-            if (parts.Length != 2)
-            {
-                throw new Exception("Invalid metadata format.");
-            }
-
-            string originalFilename = parts[0];
-            string finalOutputFile = Path.Combine(outputFolder, originalFilename);
-
-            using var deriveBytes = new Rfc2898DeriveBytes(password, salt, Iterations, HashAlgorithmName.SHA256);
-            byte[] key = deriveBytes.GetBytes(KeySize / 8);
-
-            return (finalOutputFile, key, iv);
         }
 
         /// <summary>
@@ -469,17 +489,35 @@ namespace HoudiniSafe.ViewModel.Services
         }
 
         /// <summary>
-        /// Generates a random salt for cryptographic operations.
+        /// Clears sensitive data from memory.
         /// </summary>
-        /// <returns>A byte array containing the random salt.</returns>
-        private byte[] GenerateRandomSalt()
+        /// <param name="data">Byte array containing sensitive data.</param>
+        private void ClearSensitiveData(byte[] data)
         {
-            byte[] salt = new byte[32];
-            using (var rng = new RNGCryptoServiceProvider())
+            if (data != null)
             {
-                rng.GetBytes(salt);
+                Array.Clear(data, 0, data.Length);
             }
-            return salt;
+        }
+
+        /// <summary>
+        /// Disposes of resources used by the EncryptionService.
+        /// </summary>
+        /// <param name="disposing">Whether the method is called from Dispose() or the finalizer.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    // Dispose managed resources
+                    ClearSensitiveData(_tempKey);
+                }
+
+                // Clear unmanaged resources here, if any
+
+                _disposed = true;
+            }
         }
 
         #endregion
