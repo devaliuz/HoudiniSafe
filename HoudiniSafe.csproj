@@ -2,15 +2,23 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.26100.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <SupportedOSPlatformVersion>8.0</SupportedOSPlatformVersion>
+    <StartupObject>HoudiniSafe.App</StartupObject>
+    <ApplicationIcon>Ressources\Icons\ico_or.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <None Remove="Ressources\Icons\locked.png" />
+    <None Remove="Ressources\Icons\open.ico" />
     <None Remove="Ressources\Icons\open.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Ressources\Icons\ico_or.ico" />
   </ItemGroup>
 
   <ItemGroup>
