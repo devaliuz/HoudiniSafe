@@ -1,11 +1,9 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Security.Cryptography;
 using System.IO.Compression;
 using System.Text;
-using System.Threading.Tasks;
 
-namespace HoudiniSafe.Viewmodel.Services
+namespace HoudiniSafe.ViewModel.Services
 {
     public class EncryptionService
     {
