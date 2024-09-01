@@ -36,6 +36,13 @@ namespace HoudiniSafe.ViewModel
             set => SetProperty(ref _progressVisibility, value);
         }
 
+        private bool _replaceOriginal;
+        public bool ReplaceOriginal
+        {
+            get => _replaceOriginal;
+            set => SetProperty(ref _replaceOriginal, value);
+        }
+
         public ICommand OpenFileCommand { get; }
         public ICommand ExitCommand { get; }
         public ICommand AboutCommand { get; }
@@ -122,13 +129,8 @@ namespace HoudiniSafe.ViewModel
             string password = ShowPasswordDialog("Passwort für Verschlüsselung eingeben");
             if (string.IsNullOrEmpty(password)) return;
 
-            var saveFileDialog = new SaveFileDialog
-            {
-                Filter = "Verschlüsselte Dateien (*.enc)|*.enc",
-                Title = "Speicherort für verschlüsselte Datei wählen"
-            };
-
-            if (saveFileDialog.ShowDialog() != true) return;
+            string outputFile = ReplaceOriginal ? DroppedFiles[0] : GetSaveFilePath();
+            if (string.IsNullOrEmpty(outputFile)) return;
 
             ProgressVisibility = Visibility.Visible;
             ProgressValue = 0;
@@ -142,16 +144,16 @@ namespace HoudiniSafe.ViewModel
                     string file = DroppedFiles[0];
                     if (Directory.Exists(file))
                     {
-                        await _encryptionService.EncryptFolderAsync(file, saveFileDialog.FileName, password, progress);
+                        await _encryptionService.EncryptFolderAsync(file, outputFile, password, progress, ReplaceOriginal);
                     }
                     else
                     {
-                        await _encryptionService.EncryptFileAsync(file, saveFileDialog.FileName, password, progress);
+                        await _encryptionService.EncryptFileAsync(file, outputFile, password, progress, ReplaceOriginal);
                     }
                 }
                 else
                 {
-                    await _encryptionService.EncryptMultipleFilesAsync(DroppedFiles.ToArray(), saveFileDialog.FileName, password, progress);
+                    await _encryptionService.EncryptMultipleFilesAsync(DroppedFiles.ToArray(), outputFile, password, progress, ReplaceOriginal);
                 }
 
                 MessageBox.Show("Verschlüsselung erfolgreich abgeschlossen.", "Erfolg", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -178,13 +180,8 @@ namespace HoudiniSafe.ViewModel
             string password = ShowPasswordDialog("Passwort für Entschlüsselung eingeben");
             if (string.IsNullOrEmpty(password)) return;
 
-            var saveFileDialog = new SaveFileDialog
-            {
-                Filter = "Alle Dateien (*.*)|*.*",
-                Title = "Speicherort für entschlüsselte Datei wählen"
-            };
-
-            if (saveFileDialog.ShowDialog() != true) return;
+            string outputFile = ReplaceOriginal ? DroppedFiles[0] : GetSaveFilePath();
+            if (string.IsNullOrEmpty(outputFile)) return;
 
             ProgressVisibility = Visibility.Visible;
             ProgressValue = 0;
@@ -193,7 +190,7 @@ namespace HoudiniSafe.ViewModel
 
             try
             {
-                await _encryptionService.DecryptFileAsync(DroppedFiles[0], saveFileDialog.FileName, password, progress);
+                await _encryptionService.DecryptFileAsync(DroppedFiles[0], outputFile, password, progress, ReplaceOriginal);
                 MessageBox.Show("Entschlüsselung erfolgreich abgeschlossen.", "Erfolg", MessageBoxButton.OK, MessageBoxImage.Information);
                 DroppedFiles.Clear();
             }
@@ -205,6 +202,19 @@ namespace HoudiniSafe.ViewModel
             {
                 ProgressVisibility = Visibility.Collapsed;
             }
+        }
+
+        private string GetSaveFilePath()
+        {
+            var saveFileDialog = new SaveFileDialog
+            {
+                Filter = "Verschlüsselte Dateien (*.enc)|*.enc|Alle Dateien (*.*)|*.*",
+                DefaultExt = ".enc",
+                AddExtension = true,
+                Title = "Speicherort wählen"
+            };
+
+            return saveFileDialog.ShowDialog() == true ? saveFileDialog.FileName : null;
         }
 
         private string ShowPasswordDialog(string title)

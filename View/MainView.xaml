@@ -84,29 +84,42 @@
                      Visibility="{Binding ProgressVisibility}"/>
 
         <!-- Footer mit Buttons -->
-        <StackPanel Grid.Row="3" 
-                    Orientation="Horizontal" 
-                    HorizontalAlignment="Right" 
-                    Margin="20,0,20,20">
-            <Button Content="Öffnen" 
-                    Command="{Binding OpenFileCommand}" 
-                    Style="{StaticResource ModernButtonStyle}"
-                    Margin="0,0,10,0"/>
-            <Button Content="Verschlüsseln" 
-                    Command="{Binding EncryptCommand}" 
-                    Style="{StaticResource ModernButtonStyle}"
-                    Margin="0,0,10,0"/>
-            <Button Content="Entschlüsseln" 
-                    Command="{Binding DecryptCommand}" 
-                    Style="{StaticResource ModernButtonStyle}"
-                    Margin="0,0,10,0"/>
-            <Button Content="Über" 
-                    Command="{Binding AboutCommand}" 
-                    Style="{StaticResource ModernButtonStyle}"
-                    Margin="0,0,10,0"/>
-            <Button Content="Beenden" 
-                    Command="{Binding ExitCommand}" 
-                    Style="{StaticResource ModernButtonStyle}"/>
+        <StackPanel Grid.Row="3"
+                    Orientation="Horizontal" >
+            <StackPanel
+                Orientation="Horizontal"
+                HorizontalAlignment="Left">
+                <CheckBox Content="Original ersetzen" 
+                          IsChecked="{Binding ReplaceOriginal}"
+                          ToolTip="Ersetze Originaldateien bzw. Ordner"
+                          Margin="20,0,0,10"
+                          Foreground="{StaticResource PrimaryTextBrush}"/>
+            
+            </StackPanel>
+            <StackPanel 
+                        Orientation="Horizontal" 
+                        HorizontalAlignment="Right" 
+                        Margin="20,0,20,20">
+                <Button Content="Öffnen" 
+                        Command="{Binding OpenFileCommand}" 
+                        Style="{StaticResource ModernButtonStyle}"
+                        Margin="0,0,10,0"/>
+                <Button Content="Verschlüsseln" 
+                        Command="{Binding EncryptCommand}" 
+                        Style="{StaticResource ModernButtonStyle}"
+                        Margin="0,0,10,0"/>
+                <Button Content="Entschlüsseln" 
+                        Command="{Binding DecryptCommand}" 
+                        Style="{StaticResource ModernButtonStyle}"
+                        Margin="0,0,10,0"/>
+                <Button Content="Über" 
+                        Command="{Binding AboutCommand}" 
+                        Style="{StaticResource ModernButtonStyle}"
+                        Margin="0,0,10,0"/>
+                <Button Content="Beenden" 
+                        Command="{Binding ExitCommand}" 
+                        Style="{StaticResource ModernButtonStyle}"/>
+            </StackPanel>
         </StackPanel>
     </Grid>
 </Window>
