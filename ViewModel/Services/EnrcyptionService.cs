@@ -84,7 +84,7 @@ namespace HoudiniSafe.ViewModel.Services
             File.Move(tempOutputFile, finalOutputFile, true);
         }
 
-        public async Task DecryptFileAsync(string inputFile, string outputFile, string password, IProgress<double> progress, bool replaceOriginal = false)
+        public async Task DecryptFileAsync(string inputFile, string outputFolder, string password, IProgress<double> progress, bool replaceOriginal = false)
         {
             string tempOutputFile = Path.GetTempFileName();
             string finalOutputFile;
@@ -114,10 +114,9 @@ namespace HoudiniSafe.ViewModel.Services
                 aes.Key = key.GetBytes(aes.KeySize / 8);
                 aes.IV = key.GetBytes(aes.BlockSize / 8);
 
-                // Determine finalOutputFile without changing the name
                 finalOutputFile = replaceOriginal
-                    ? Path.Combine(Path.GetDirectoryName(inputFile), Path.GetFileNameWithoutExtension(inputFile))
-                    : Path.Combine(outputFile, originalFilename);
+                    ? Path.Combine(Path.GetDirectoryName(inputFile), originalFilename)
+                    : Path.Combine(outputFolder, originalFilename);
 
                 using var outputFileStream = new FileStream(tempOutputFile, FileMode.Create, FileAccess.Write, FileShare.None, BufferSize, true);
                 using var cryptoStream = new CryptoStream(inputFileStream, aes.CreateDecryptor(), CryptoStreamMode.Read);
@@ -131,7 +130,7 @@ namespace HoudiniSafe.ViewModel.Services
                 {
                     await outputFileStream.WriteAsync(buffer, 0, read);
                     bytesRead += read;
-                    progress?.Report((double)bytesRead / totalBytes);
+                    progress?.Report((double)bytesRead / totalBytes * 0.9); // 90% for decryption
                 }
             }
             catch
@@ -145,7 +144,39 @@ namespace HoudiniSafe.ViewModel.Services
                 File.Delete(inputFile);
             }
 
+            // Ensure the output directory exists
+            Directory.CreateDirectory(Path.GetDirectoryName(finalOutputFile));
+
+            // Move the decrypted file to its final location
             File.Move(tempOutputFile, finalOutputFile, true);
+
+            // Check if the decrypted file is a ZIP and extract if necessary
+            if (Path.GetExtension(finalOutputFile).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+            {
+                string extractPath = Path.Combine(
+                    Path.GetDirectoryName(finalOutputFile),
+                    Path.GetFileNameWithoutExtension(finalOutputFile)
+                );
+                Directory.CreateDirectory(extractPath);
+
+                try
+                {
+                    ZipFile.ExtractToDirectory(finalOutputFile, extractPath, true);
+                    progress?.Report(1.0); // 100% complete
+
+                    // Delete the ZIP file after extraction
+                    File.Delete(finalOutputFile);
+                }
+                catch (Exception ex)
+                {
+                    // If extraction fails, we keep the ZIP file and report the error
+                    throw new Exception($"Die Datei wurde erfolgreich entschlüsselt, aber das Entpacken ist fehlgeschlagen: {ex.Message}");
+                }
+            }
+            else
+            {
+                progress?.Report(1.0); // 100% complete for non-ZIP files
+            }
         }
 
 
@@ -156,30 +187,32 @@ namespace HoudiniSafe.ViewModel.Services
                 throw new DirectoryNotFoundException($"Der Ordner {inputFolder} wurde nicht gefunden.");
             }
 
-            string[] files = Directory.GetFiles(inputFolder, "*", SearchOption.AllDirectories);
-            int totalFiles = files.Length;
-            int processedFiles = 0;
+            string folderName = new DirectoryInfo(inputFolder).Name;
+            string tempZipFile = Path.Combine(Path.GetTempPath(), $"{folderName}.zip");
+            string finalOutputFile = Path.Combine(outputFolder, $"{folderName}.zip{EncryptedExtension}");
 
-            foreach (string file in files)
+            try
             {
-                string relativePath = Path.GetRelativePath(inputFolder, file);
-                string outputFile = Path.Combine(outputFolder, relativePath);
-                string outputFileFolder = Path.GetDirectoryName(outputFile);
+                // Schritt 1: Ordner zu ZIP-Datei komprimieren
+                ZipFile.CreateFromDirectory(inputFolder, tempZipFile);
+                progress?.Report(0.5); // 50% Fortschritt nach dem Zippen
 
-                var fileProgress = new Progress<double>(p =>
+                // Schritt 2: ZIP-Datei verschlüsseln
+                var encryptProgress = new Progress<double>(p => progress?.Report(0.5 + p * 0.5)); // Restliche 50% für die Verschlüsselung
+                await EncryptFileAsync(tempZipFile, outputFolder, password, encryptProgress, false);
+
+                if (replaceOriginal)
                 {
-                    double overallProgress = (processedFiles + p) / totalFiles;
-                    progress?.Report(overallProgress);
-                });
-
-                await EncryptFileAsync(file, outputFileFolder, password, fileProgress, replaceOriginal);
-
-                processedFiles++;
+                    Directory.Delete(inputFolder, true);
+                }
             }
-
-            if (replaceOriginal)
+            finally
             {
-                Directory.Delete(inputFolder, true);
+                // Aufräumen: Temporäre ZIP-Datei löschen
+                if (File.Exists(tempZipFile))
+                {
+                    File.Delete(tempZipFile);
+                }
             }
         }
 
