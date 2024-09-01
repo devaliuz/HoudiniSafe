@@ -13,12 +13,20 @@ namespace HoudiniSafe.ViewModel.Services
         private const int BufferSize = 81920; // 80 KB
         private const string EncryptedExtension = ".enc";
 
-        public async Task EncryptFileAsync(string inputFile, string outputFile, string password, IProgress<double> progress, bool replaceOriginal = false)
+        public async Task EncryptFileAsync(string inputFile, string outputFolder, string password, IProgress<double> progress, bool replaceOriginal = false)
         {
             string tempOutputFile = Path.GetTempFileName();
+            string inputFileName = Path.GetFileName(inputFile);
+            string finalOutputFile;
 
-            // Determine finalOutputFile without changing the name
-            string finalOutputFile = replaceOriginal ? outputFile + EncryptedExtension : Path.Combine(outputFile, Path.GetFileName(inputFile) + EncryptedExtension);
+            if (replaceOriginal)
+            {
+                finalOutputFile = inputFile + EncryptedExtension;
+            }
+            else
+            {
+                finalOutputFile = Path.Combine(outputFolder, inputFileName + EncryptedExtension);
+            }
 
             try
             {
@@ -72,9 +80,9 @@ namespace HoudiniSafe.ViewModel.Services
                 File.Delete(inputFile);
             }
 
+            Directory.CreateDirectory(Path.GetDirectoryName(finalOutputFile));
             File.Move(tempOutputFile, finalOutputFile, true);
         }
-
 
         public async Task DecryptFileAsync(string inputFile, string outputFile, string password, IProgress<double> progress, bool replaceOriginal = false)
         {
@@ -141,87 +149,61 @@ namespace HoudiniSafe.ViewModel.Services
         }
 
 
-        public async Task EncryptFolderAsync(string inputFolder, string outputFile, string password, IProgress<double> progress, bool replaceOriginal = false)
+        public async Task EncryptFolderAsync(string inputFolder, string outputFolder, string password, IProgress<double> progress, bool replaceOriginal = false)
         {
-            string tempDir = CreateUniqueTemporaryDirectory();
-            string tempZipFile = Path.Combine(tempDir, "temp.zip");
-            string finalOutputFile = outputFile + EncryptedExtension;
-
-            try
+            if (!Directory.Exists(inputFolder))
             {
-                await Task.Run(() => ZipFile.CreateFromDirectory(inputFolder, tempZipFile));
-
-                var zipProgress = new Progress<double>(p => progress?.Report(0.5 + p * 0.5)); // 50% progress for encryption
-                await EncryptFileAsync(tempZipFile, outputFile, password, zipProgress, false);
+                throw new DirectoryNotFoundException($"Der Ordner {inputFolder} wurde nicht gefunden.");
             }
-            finally
+
+            string[] files = Directory.GetFiles(inputFolder, "*", SearchOption.AllDirectories);
+            int totalFiles = files.Length;
+            int processedFiles = 0;
+
+            foreach (string file in files)
             {
-                // Aufräumen: Temporäre Dateien und Verzeichnisse löschen
-                try
+                string relativePath = Path.GetRelativePath(inputFolder, file);
+                string outputFile = Path.Combine(outputFolder, relativePath);
+                string outputFileFolder = Path.GetDirectoryName(outputFile);
+
+                var fileProgress = new Progress<double>(p =>
                 {
-                    if (File.Exists(tempZipFile))
-                    {
-                        File.Delete(tempZipFile);
-                    }
-                    if (Directory.Exists(tempDir))
-                    {
-                        Directory.Delete(tempDir, true);
-                    }
-                }
-                catch (IOException ex)
-                {
-                    // Log the error or handle it as appropriate for your application
-                    Console.WriteLine($"Error cleaning up temporary files: {ex.Message}");
-                }
+                    double overallProgress = (processedFiles + p) / totalFiles;
+                    progress?.Report(overallProgress);
+                });
+
+                await EncryptFileAsync(file, outputFileFolder, password, fileProgress, replaceOriginal);
+
+                processedFiles++;
             }
 
             if (replaceOriginal)
             {
                 Directory.Delete(inputFolder, true);
-                File.Move(finalOutputFile, inputFolder + EncryptedExtension);
             }
         }
 
-        public async Task EncryptMultipleFilesAsync(string[] inputFiles, string outputFile, string password, IProgress<double> progress, bool replaceOriginal = false)
+        public async Task EncryptMultipleFilesAsync(string[] inputFiles, string outputFolder, string password, IProgress<double> progress, bool replaceOriginal = false)
         {
-            string tempDir = CreateUniqueTemporaryDirectory();
-            string tempZipFile = Path.Combine(tempDir, "temp.zip");
-            string finalOutputFile = outputFile + EncryptedExtension;
+            int totalFiles = inputFiles.Length;
+            int processedFiles = 0;
 
-            try
+            foreach (string file in inputFiles)
             {
-                using (var archive = ZipFile.Open(tempZipFile, ZipArchiveMode.Create))
+                if (!File.Exists(file))
                 {
-                    int fileCount = inputFiles.Length;
-                    for (int i = 0; i < fileCount; i++)
-                    {
-                        archive.CreateEntryFromFile(inputFiles[i], Path.GetFileName(inputFiles[i]));
-                        progress?.Report((double)i / fileCount * 0.5); // 50% progress for zipping
-                    }
+                    throw new FileNotFoundException($"Die Datei {file} wurde nicht gefunden.");
                 }
 
-                var zipProgress = new Progress<double>(p => progress?.Report(0.5 + p * 0.5)); // 50% progress for encryption
-                await EncryptFileAsync(tempZipFile, outputFile, password, zipProgress, false);
-            }
-            finally
-            {
-                // Aufräumen: Temporäre Dateien und Verzeichnisse löschen
-                try
+                var fileProgress = new Progress<double>(p =>
                 {
-                    if (File.Exists(tempZipFile))
-                    {
-                        File.Delete(tempZipFile);
-                    }
-                    if (Directory.Exists(tempDir))
-                    {
-                        Directory.Delete(tempDir, true);
-                    }
-                }
-                catch (IOException ex)
-                {
-                    // Log the error or handle it as appropriate for your application
-                    Console.WriteLine($"Error cleaning up temporary files: {ex.Message}");
-                }
+                    double overallProgress = (processedFiles + p) / totalFiles;
+                    progress?.Report(overallProgress);
+                });
+
+                await EncryptFileAsync(file, outputFolder, password, fileProgress, replaceOriginal);
+
+                processedFiles++;
             }
 
             if (replaceOriginal)
@@ -233,17 +215,26 @@ namespace HoudiniSafe.ViewModel.Services
             }
         }
 
-        private string CreateUniqueTemporaryDirectory()
+        private void CopyDirectory(string sourceDir, string destinationDir)
         {
-            string tempDir;
-            do
-            {
-                tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-            } while (Directory.Exists(tempDir));
+            // Create the destination directory
+            Directory.CreateDirectory(destinationDir);
 
-            Directory.CreateDirectory(tempDir);
-            return tempDir;
+            // Get the files in the source directory and copy to the destination directory
+            foreach (string file in Directory.GetFiles(sourceDir))
+            {
+                string destFile = Path.Combine(destinationDir, Path.GetFileName(file));
+                File.Copy(file, destFile, true);
+            }
+
+            // If copying subdirectories, copy them and their contents to new location
+            foreach (string subdir in Directory.GetDirectories(sourceDir))
+            {
+                string destSubDir = Path.Combine(destinationDir, Path.GetFileName(subdir));
+                CopyDirectory(subdir, destSubDir);
+            }
         }
+
 
         private byte[] GenerateRandomSalt()
         {

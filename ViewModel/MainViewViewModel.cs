@@ -252,10 +252,13 @@ namespace HoudiniSafe.ViewModel
             string password = ShowPasswordDialog("Passwort für Verschlüsselung eingeben");
             if (string.IsNullOrEmpty(password)) return;
 
-            string outputFile = GetOutputFilePath();
-            if (string.IsNullOrEmpty(outputFile)) return;
+            string outputFolder = GetOutputFolderPath();
+            if (string.IsNullOrEmpty(outputFolder)) return;
 
-            await PerformEncryptionAsync(password, outputFile);
+            // Ensure the output folder exists
+            Directory.CreateDirectory(outputFolder);
+
+            await PerformEncryptionAsync(password, outputFolder);
         }
 
         /// <summary>
@@ -277,7 +280,7 @@ namespace HoudiniSafe.ViewModel
         /// </summary>
         /// <param name="password">The password for encryption.</param>
         /// <param name="outputFile">The path where the encrypted file will be saved.</param>
-        private async Task PerformEncryptionAsync(string password, string outputFile)
+        private async Task PerformEncryptionAsync(string password, string outputFolder)
         {
             ProgressVisibility = Visibility.Visible;
             ProgressValue = 0;
@@ -285,7 +288,7 @@ namespace HoudiniSafe.ViewModel
 
             try
             {
-                await EncryptFilesAsync(password, outputFile, progress);
+                await EncryptFilesAsync(password, outputFolder, progress);
                 _dialogService.ShowPopup("Verschlüsselung erfolgreich abgeschlossen.", "Erfolg", "EncryptIcon");
                 DroppedFiles.Clear();
             }
@@ -305,23 +308,23 @@ namespace HoudiniSafe.ViewModel
         /// <param name="password">The password for encryption.</param>
         /// <param name="outputFile">The path where the encrypted file will be saved.</param>
         /// <param name="progress">Progress reporting for the encryption process.</param>
-        private async Task EncryptFilesAsync(string password, string outputFile, IProgress<double> progress)
+        private async Task EncryptFilesAsync(string password, string outputFolder, IProgress<double> progress)
         {
             if (DroppedFiles.Count == 1)
             {
                 string file = DroppedFiles[0];
                 if (Directory.Exists(file))
                 {
-                    await _encryptionService.EncryptFolderAsync(file, outputFile, password, progress, ReplaceOriginal);
+                    await _encryptionService.EncryptFolderAsync(file, outputFolder, password, progress, ReplaceOriginal);
                 }
                 else
                 {
-                    await _encryptionService.EncryptFileAsync(file, outputFile, password, progress, ReplaceOriginal);
+                    await _encryptionService.EncryptFileAsync(file, outputFolder, password, progress, ReplaceOriginal);
                 }
             }
             else
             {
-                await _encryptionService.EncryptMultipleFilesAsync(DroppedFiles.ToArray(), outputFile, password, progress, ReplaceOriginal);
+                await _encryptionService.EncryptMultipleFilesAsync(DroppedFiles.ToArray(), outputFolder, password, progress, ReplaceOriginal);
             }
         }
 
@@ -335,7 +338,7 @@ namespace HoudiniSafe.ViewModel
             string password = ShowPasswordDialog("Passwort für Entschlüsselung eingeben");
             if (string.IsNullOrEmpty(password)) return;
 
-            string outputFile = GetOutputFilePath();
+            string outputFile = GetOutputFolderPath();
             if (string.IsNullOrEmpty(outputFile)) return;
 
             await PerformDecryptionAsync(password, outputFile);
@@ -390,16 +393,24 @@ namespace HoudiniSafe.ViewModel
         /// Gets the output file path based on the ReplaceOriginal property.
         /// </summary>
         /// <returns>The path where the file will be saved.</returns>
-        private string GetOutputFilePath()
+        private string GetOutputFolderPath()
         {
-            return ReplaceOriginal ? DroppedFiles[0] : GetSaveFilePath();
+            if (ReplaceOriginal)
+            {
+                // If replacing original, use the directory of the first file
+                return Path.GetDirectoryName(DroppedFiles[0]);
+            }
+            else
+            {
+                return GetSaveFolderPath();
+            }
         }
 
         /// <summary>
         /// Shows a folder picker dialog and returns the selected folder path.
         /// </summary>
         /// <returns>The path of the selected folder, or null if canceled.</returns>
-        private string GetSaveFilePath()
+        private string GetSaveFolderPath()
         {
             var dialog = new CommonOpenFileDialog
             {
