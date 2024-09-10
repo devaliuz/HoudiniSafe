@@ -8,6 +8,7 @@ using Microsoft.Win32;
 using HoudiniSafe.View;
 using HoudiniSafe.Models;
 using Microsoft.WindowsAPICodePack.Dialogs;
+using HoudiniSafe.Enums;
 
 namespace HoudiniSafe.ViewModel
 {
@@ -48,6 +49,8 @@ namespace HoudiniSafe.ViewModel
         //Wether Darkmode is Enabled or not
         private bool _isDarkMode;
 
+        //Mirrors Active Tab
+        private TabType _activeTab;
 
 
         #endregion
@@ -146,6 +149,15 @@ namespace HoudiniSafe.ViewModel
         /// Initialize the SettingsViewModel
         /// </summary>
         public SettingsViewModel SettingsViewModel { get; }
+
+        /// <summary>
+        /// Mirrors Active Tab
+        /// </summary>
+        public TabType ActiveTab
+        {
+            get => _activeTab;
+            set => SetProperty(ref _activeTab, value);
+        }
 
         #endregion
 
@@ -351,6 +363,11 @@ namespace HoudiniSafe.ViewModel
             Directory.CreateDirectory(outputFolder);
 
             await PerformEncryptionAsync(password, outputFolder);
+
+            if (ActiveTab == TabType.Cloud)
+            {
+                await UploadToCloudAsync(outputFolder);
+            }
         }
 
         /// <summary>
@@ -561,7 +578,17 @@ namespace HoudiniSafe.ViewModel
             }
             else
             {
-                return GetSaveFolderPath();
+                switch (ActiveTab) 
+                {
+                    case TabType.Local:
+                        return GetSaveFolderPath();
+
+                    case TabType.Cloud: 
+                        return Path.GetDirectoryName(DroppedFiles[0]);
+
+                    default:
+                        return "";
+                }
             }
         }
 
@@ -575,6 +602,42 @@ namespace HoudiniSafe.ViewModel
             {
                 CloudFiles.Clear();
             }
+        }
+
+        private async Task UploadToCloudAsync(string folderPath)
+        {
+            ProgressVisibility = Visibility.Visible;
+            ProgressValue = 0;
+            var progress = new Progress<double>(value => ProgressValue = value * 100);
+
+            string fileToDelete = "";
+            try
+            {
+                var files = Directory.GetFiles(folderPath, "*.enc");
+                foreach (var file in files)
+                {
+                    fileToDelete = Path.Combine(folderPath, file);
+                    await _googleDriveFileService.UploadFileAsync(file);
+                }
+                _dialogService.ShowPopup("Dateien erfolgreich in die Cloud hochgeladen.", "Erfolg");
+            }
+            catch (Exception ex)
+            {
+                _dialogService.ShowPopup($"Fehler beim Hochladen in die Cloud: {ex.Message}", "Fehler");
+            }
+            finally 
+            {
+                await ReLoadFolder();
+                File.Delete(fileToDelete);
+            }
+        }
+
+        private async Task ReLoadFolder() 
+        {
+            CloudFiles.Clear();
+            string folderId = await _googleDriveFileService.GetHoudiniFolderIdAsync();
+            var folderContents = await _googleDriveFileService.GetFolderContentsAsync(folderId);
+            UpdateCloudFiles(folderContents);
         }
 
         /// <summary>

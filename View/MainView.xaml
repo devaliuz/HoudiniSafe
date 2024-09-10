@@ -84,7 +84,8 @@
         <TabControl Grid.Row="1" 
                     Margin="10,5" 
                     Background="Transparent" 
-                    ItemContainerStyle="{StaticResource TabControlStyle}">
+                    ItemContainerStyle="{StaticResource TabControlStyle}"
+                    SelectedIndex="{Binding ActiveTab, Converter={StaticResource EnumToIntConverter}}">
             <TabItem Header="Cloud">
                 <userControl:CloudView/>
             </TabItem>

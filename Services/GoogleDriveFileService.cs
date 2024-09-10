@@ -1,9 +1,11 @@
 ﻿using Google.Apis.Drive.v3;
+using Google.Apis.Upload;
 using HoudiniSafe.Interfaces;
 using HoudiniSafe.Models;
 using HoudiniSafe.Services;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -42,7 +44,7 @@ public class GoogleDriveFileService : IFileService
         }
     }
 
-    private async Task<string> GetHoudiniFolderIdAsync()
+    public async Task<string> GetHoudiniFolderIdAsync()
     {
         try
         {
@@ -110,5 +112,52 @@ public class GoogleDriveFileService : IFileService
             return new List<CloudItem>();
         }
         return folderContents;
+    }
+
+    public async Task<bool> UploadFileAsync(string filePath)
+    {
+        if (!_isInitialized)
+        {
+            Console.WriteLine("Google Drive service is not initialized.");
+            return false;
+        }
+
+        try
+        {
+            // Get the Houdini folder ID
+            string houdiniFolder = await GetHoudiniFolderIdAsync();
+            if (string.IsNullOrEmpty(houdiniFolder))
+            {
+                return false;
+            }
+
+            var fileMetadata = new Google.Apis.Drive.v3.Data.File()
+            {
+                Name = Path.GetFileName(filePath),
+                Parents = new List<string> { houdiniFolder }
+            };
+
+            FilesResource.CreateMediaUpload request;
+            using (var stream = new FileStream(filePath, FileMode.Open))
+            {
+                request = _driveService.Files.Create(fileMetadata, stream, "application/octet-stream");
+                request.Fields = "id";
+                var result = await request.UploadAsync();
+
+                if (result.Status == UploadStatus.Failed)
+                {
+                    Console.WriteLine($"Error uploading file: {result.Exception.Message}");
+                    return false;
+                }
+            }
+
+            Console.WriteLine($"File uploaded successfully. File ID: {request.ResponseBody?.Id}");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred while uploading the file: {ex.Message}");
+            return false;
+        }
     }
 }

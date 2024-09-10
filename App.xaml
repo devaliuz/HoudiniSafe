@@ -24,6 +24,7 @@
             <converters:FilePathToNameConverter x:Key="FilePathToNameConverter"/>
             <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
             <converters:FolderOrFileIconConverter x:Key="FolderOrFileIconConverter"/>
+            <converters:EnumToIntConverter x:Key="EnumToIntConverter"/>
 
             <!--Images-->
             <BitmapImage x:Key="EncryptIcon" UriSource="pack://application:,,,/Ressources/Icons/locked.png"/>
