@@ -135,10 +135,9 @@ namespace HoudiniSafe.Services
                         }
 
                         string originalFilename = parts[0];
-                        string originalExtension = parts[1];
 
                         // Ensure the final output file does not have additional .enc extension
-                        finalOutputFile = Path.Combine(outputFolder, originalFilename /*+ originalExtension*/);
+                        finalOutputFile = Path.Combine(outputFolder, originalFilename);
 
                         using (var deriveBytes = new Rfc2898DeriveBytes(Marshal.PtrToStringUni(Marshal.SecureStringToBSTR(securePassword)), salt, Iterations, HashAlgorithmName.SHA256))
                         {
