@@ -58,7 +58,6 @@
 
             <!-- Settings Popup -->
             <Popup x:Name="SettingsPopup"
-                   PlacementTarget="{Binding ElementName=SettingsButton}"
                    Placement="Bottom"
                    StaysOpen="False">
                 <Border Background="{StaticResource PrimaryBackgroundBrush}"
