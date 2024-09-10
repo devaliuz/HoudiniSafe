@@ -86,7 +86,8 @@ public class GoogleDriveFileService : IFileService
             var listRequest = _driveService.Files.List();
             listRequest.PageSize = 100;
             listRequest.Fields = "nextPageToken, files(id, name, mimeType, parents)";
-            listRequest.Q = $"'{folderId}' in parents";
+            // Filter for .enc files and folders
+            listRequest.Q = $"('{folderId}' in parents) and (mimeType = 'application/vnd.google-apps.folder' or name contains '.enc')";
 
             var files = await listRequest.ExecuteAsync();
             if (files?.Files != null)

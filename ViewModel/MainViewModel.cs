@@ -48,8 +48,7 @@ namespace HoudiniSafe.ViewModel
         //Wether Darkmode is Enabled or not
         private bool _isDarkMode;
 
-        //Holds the SettingsViewModel
-        //private readonly SettingsViewModel _settingsViewModel;
+
 
         #endregion
 
@@ -141,6 +140,7 @@ namespace HoudiniSafe.ViewModel
         /// Determines if files can be decrypted based on the state of DroppedFiles.
         /// </summary>
         public bool CanDecrypt => DroppedFiles != null && DroppedFiles.Count == 1 && DroppedFiles[0].EndsWith(".enc");
+
 
         /// <summary>
         /// Initialize the SettingsViewModel

@@ -19,7 +19,8 @@
         <Button Content="Mit Google Drive verbinden"
                 Command="{Binding ConnectToGoogleDriveCommand}"
                 Style="{StaticResource ModernButtonStyle}"
-                Margin="0,0,0,10"/>
+                Margin="0,0,0,10"
+                Visibility="{Binding IsGoogleDriveConnected, Converter={StaticResource InvertedBooleanToVisibilityConverter}}"/>
 
         <Button Content="Verbindung trennen"
                 Command="{Binding DisconnectFromGoogleDriveCommand}"

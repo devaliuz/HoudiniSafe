@@ -35,7 +35,8 @@
                           SelectedItemChanged="TreeView_SelectedItemChanged" 
                           Style="{StaticResource ModernTreeViewStyle}"
                           Margin="10"
-                          services:DragAndDropService.DropCommand="{Binding DropCommand}">
+                          services:DragAndDropService.DropCommand="{Binding DropCommand}"
+                          AllowDrop="True">
                     <TreeView.ItemTemplate>
                         <HierarchicalDataTemplate ItemsSource="{Binding Items}">
                             <StackPanel Orientation="Horizontal">
@@ -47,7 +48,7 @@
                                 <Image Source="{Binding IsFolder, Converter={StaticResource FolderOrFileIconConverter}}" 
                                        Grid.Column="2"
                                        Margin="5,0,5,0"
-                                       HorizontalAlignment="Right" Cursor=""/>
+                                       HorizontalAlignment="Right"/>
                             </StackPanel>
                         </HierarchicalDataTemplate>
                     </TreeView.ItemTemplate>

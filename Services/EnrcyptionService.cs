@@ -44,7 +44,8 @@ namespace HoudiniSafe.Services
         public async Task EncryptFileAsync(string inputFile, string outputFolder, string password, IProgress<double> progress, bool replaceOriginal = false)
         {
             string tempOutputFile = Path.GetTempFileName();
-            string inputFileName = Path.GetFileName(inputFile);
+            string inputFileName = Path.GetFileNameWithoutExtension(inputFile);
+            string inputFileExtension = Path.GetExtension(inputFile);
             string finalOutputFile = Path.Combine(outputFolder, inputFileName + EncryptedExtension);
 
             try
@@ -68,7 +69,7 @@ namespace HoudiniSafe.Services
                         using (var inputFileStream = CreateFileStream(inputFile, FileMode.Open, FileAccess.Read))
                         using (var outputFileStream = CreateFileStream(tempOutputFile, FileMode.Create, FileAccess.Write))
                         {
-                            await WriteEncryptionHeaderAsync(outputFileStream, salt, iv, inputFileName);
+                            await WriteEncryptionHeaderAsync(outputFileStream, salt, iv, inputFileName + inputFileExtension);
 
                             using (var encryptor = aes.CreateEncryptor(_tempKey, iv))
                             using (var cryptoStream = new CryptoStream(outputFileStream, encryptor, CryptoStreamMode.Write))
@@ -92,6 +93,7 @@ namespace HoudiniSafe.Services
 
             FinalizeEncryption(inputFile, finalOutputFile, tempOutputFile, replaceOriginal);
         }
+
 
         /// <summary>
         /// Decrypts a file asynchronously.
@@ -124,14 +126,19 @@ namespace HoudiniSafe.Services
                         await inputFileStream.ReadAsync(salt, 0, salt.Length);
                         await inputFileStream.ReadAsync(iv, 0, iv.Length);
 
+                        // Read metadata
                         string metadata = await ReadMetadataAsync(inputFileStream);
                         string[] parts = metadata.Split('|');
                         if (parts.Length != 2)
                         {
                             throw new Exception("Invalid metadata format.");
                         }
+
                         string originalFilename = parts[0];
-                        finalOutputFile = Path.Combine(outputFolder, originalFilename);
+                        string originalExtension = parts[1];
+
+                        // Ensure the final output file does not have additional .enc extension
+                        finalOutputFile = Path.Combine(outputFolder, originalFilename /*+ originalExtension*/);
 
                         using (var deriveBytes = new Rfc2898DeriveBytes(Marshal.PtrToStringUni(Marshal.SecureStringToBSTR(securePassword)), salt, Iterations, HashAlgorithmName.SHA256))
                         {
@@ -168,6 +175,9 @@ namespace HoudiniSafe.Services
 
             await HandleZipFileAsync(finalOutputFile, progress);
         }
+
+
+
 
         /// <summary>
         /// Encrypts a folder asynchronously.
@@ -235,17 +245,20 @@ namespace HoudiniSafe.Services
                     throw new FileNotFoundException($"The file {file} was not found.");
                 }
 
+                // Report progress for each file
                 var fileProgress = new Progress<double>(p =>
                 {
-                    double overallProgress = (processedFiles + p) / totalFiles;
+                    double overallProgress = (processedFiles + p) / (double)totalFiles;
                     progress?.Report(overallProgress);
                 });
 
+                // Encrypt the file
                 await EncryptFileAsync(file, outputFolder, password, fileProgress, replaceOriginal);
 
                 processedFiles++;
             }
 
+            // Delete original files if replaceOriginal is true
             if (replaceOriginal)
             {
                 foreach (string file in inputFiles)
@@ -254,6 +267,7 @@ namespace HoudiniSafe.Services
                 }
             }
         }
+
 
         /// <summary>
         /// Disposes of resources used by the EncryptionService.
@@ -328,6 +342,8 @@ namespace HoudiniSafe.Services
             await outputStream.WriteAsync(metadataBytes, 0, metadataBytes.Length);
         }
 
+
+
         /// <summary>
         /// Encrypts the content of the input stream.
         /// </summary>
@@ -384,6 +400,7 @@ namespace HoudiniSafe.Services
             await inputStream.ReadAsync(metadataBytes, 0, metadataLength);
             return Encoding.UTF8.GetString(metadataBytes);
         }
+
 
         /// <summary>
         /// Decrypts the content of the input stream.
