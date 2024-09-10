@@ -606,10 +606,6 @@ namespace HoudiniSafe.ViewModel
 
         private async Task UploadToCloudAsync(string folderPath)
         {
-            ProgressVisibility = Visibility.Visible;
-            ProgressValue = 0;
-            var progress = new Progress<double>(value => ProgressValue = value * 100);
-
             string fileToDelete = "";
             try
             {

@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 public class GoogleDriveFileService : IFileService
 {
-    private static readonly string[] Scopes = { DriveService.Scope.DriveReadonly };
+    private static readonly string[] Scopes = { DriveService.Scope.Drive };  // Changed to full access
     private const string ApplicationName = "HoudiniSafe";
     private DriveService _driveService;
     private static readonly Lazy<GoogleDriveFileService> _instance =
@@ -36,10 +36,12 @@ public class GoogleDriveFileService : IFileService
             var credential = await _googleAuthenticator.AuthenticateAsync();
             _driveService = _googleAuthenticator.CreateDriveService(credential);
             _isInitialized = true;
+            Console.WriteLine("Google Drive service initialized successfully.");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Failed to initialize Google Drive service: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
             throw;
         }
     }
@@ -48,19 +50,40 @@ public class GoogleDriveFileService : IFileService
     {
         try
         {
-            // List files and folders in the root directory to find the "Houdini" folder
+            Console.WriteLine("Searching for Houdini folder...");
             var listRequest = _driveService.Files.List();
-            listRequest.PageSize = 100;
-            listRequest.Fields = "nextPageToken, files(id, name)";
-            listRequest.Q = "name = 'Houdini' and mimeType = 'application/vnd.google-apps.folder'";
+            listRequest.Q = "name = 'Houdini' and mimeType = 'application/vnd.google-apps.folder' and trashed = false";
+            listRequest.Fields = "files(id, name)";
 
             var result = await listRequest.ExecuteAsync();
             var houdiniFolder = result.Files.FirstOrDefault();
-            return houdiniFolder?.Id;
+
+            if (houdiniFolder != null)
+            {
+                Console.WriteLine($"Found Houdini folder. ID: {houdiniFolder.Id}");
+                return houdiniFolder.Id;
+            }
+            else
+            {
+                Console.WriteLine("Houdini folder not found. Creating it...");
+                var folderMetadata = new Google.Apis.Drive.v3.Data.File()
+                {
+                    Name = "Houdini",
+                    MimeType = "application/vnd.google-apps.folder"
+                };
+
+                var request = _driveService.Files.Create(folderMetadata);
+                request.Fields = "id";
+                var folder = await request.ExecuteAsync();
+
+                Console.WriteLine($"Houdini folder created. Folder ID: {folder.Id}");
+                return folder.Id;
+            }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error finding the Houdini folder: {ex.Message}");
+            Console.WriteLine($"Error finding or creating the Houdini folder: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
             return null;
         }
     }
@@ -69,49 +92,69 @@ public class GoogleDriveFileService : IFileService
     {
         if (!_isInitialized)
         {
-            return new List<CloudItem>(); // Return an empty list if not initialized
+            Console.WriteLine("Google Drive service is not initialized.");
+            return new List<CloudItem>();
         }
 
-        // If folderId is null, find the Houdini folder ID
-        if (folderId == null)
-        {
-            folderId = await GetHoudiniFolderIdAsync();
-            if (folderId == null)
-            {
-                return new List<CloudItem>(); // Return an empty list if Houdini folder is not found
-            }
-        }
-
-        var folderContents = new List<CloudItem>();
         try
         {
-            var listRequest = _driveService.Files.List();
-            listRequest.PageSize = 100;
-            listRequest.Fields = "nextPageToken, files(id, name, mimeType, parents)";
-            // Filter for .enc files and folders
-            listRequest.Q = $"('{folderId}' in parents) and (mimeType = 'application/vnd.google-apps.folder' or name contains '.enc')";
-
-            var files = await listRequest.ExecuteAsync();
-            if (files?.Files != null)
+            if (folderId == null)
             {
-                foreach (var file in files.Files)
+                folderId = await GetHoudiniFolderIdAsync();
+                if (folderId == null)
                 {
-                    var cloudItem = new CloudItem
-                    {
-                        Name = file.Name,
-                        Id = file.Id,
-                        IsFolder = file.MimeType == "application/vnd.google-apps.folder"
-                    };
-                    folderContents.Add(cloudItem);
+                    Console.WriteLine("Houdini folder not found.");
+                    return new List<CloudItem>();
                 }
             }
+
+            Console.WriteLine($"Searching for contents in folder with ID: {folderId}");
+
+            var folderContents = new List<CloudItem>();
+            string pageToken = null;
+
+            do
+            {
+                var listRequest = _driveService.Files.List();
+                listRequest.Q = $"'{folderId}' in parents and trashed = false";
+                listRequest.Fields = "nextPageToken, files(id, name, mimeType)";
+                listRequest.PageToken = pageToken;
+                listRequest.PageSize = 1000;
+
+                var result = await listRequest.ExecuteAsync();
+
+                Console.WriteLine($"Retrieved {result.Files.Count} items from Google Drive");
+
+                foreach (var file in result.Files)
+                {
+                    Console.WriteLine($"Found item: {file.Name}, Type: {file.MimeType}");
+
+                    if (file.MimeType == "application/vnd.google-apps.folder" || file.Name.EndsWith(".enc"))
+                    {
+                        var cloudItem = new CloudItem
+                        {
+                            Name = file.Name,
+                            Id = file.Id,
+                            IsFolder = file.MimeType == "application/vnd.google-apps.folder"
+                        };
+                        folderContents.Add(cloudItem);
+                        Console.WriteLine($"Added to list: {cloudItem.Name}, IsFolder: {cloudItem.IsFolder}");
+                    }
+                }
+
+                pageToken = result.NextPageToken;
+            } while (pageToken != null);
+
+            Console.WriteLine($"Total items added to folderContents: {folderContents.Count}");
+
+            return folderContents.OrderBy(item => !item.IsFolder).ThenBy(item => item.Name).ToList();
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error fetching folder contents: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
             return new List<CloudItem>();
         }
-        return folderContents;
     }
 
     public async Task<bool> UploadFileAsync(string filePath)
@@ -124,10 +167,10 @@ public class GoogleDriveFileService : IFileService
 
         try
         {
-            // Get the Houdini folder ID
             string houdiniFolder = await GetHoudiniFolderIdAsync();
             if (string.IsNullOrEmpty(houdiniFolder))
             {
+                Console.WriteLine("Failed to get or create Houdini folder.");
                 return false;
             }
 
@@ -157,6 +200,7 @@ public class GoogleDriveFileService : IFileService
         catch (Exception ex)
         {
             Console.WriteLine($"An error occurred while uploading the file: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
             return false;
         }
     }
