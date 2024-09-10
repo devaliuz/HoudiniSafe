@@ -2,19 +2,29 @@
 using HoudiniSafe.Interfaces;
 using HoudiniSafe.Models;
 using HoudiniSafe.Services;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 public class GoogleDriveFileService : IFileService
 {
     private static readonly string[] Scopes = { DriveService.Scope.DriveReadonly };
     private const string ApplicationName = "HoudiniSafe";
     private DriveService _driveService;
-    private readonly GoogleAuthenticator _googleAuthenticator;
-    private bool _isInitialized = false;
+    private static readonly Lazy<GoogleDriveFileService> _instance =
+        new Lazy<GoogleDriveFileService>(() => new GoogleDriveFileService(GoogleAuthenticator.Instance));
 
-    public GoogleDriveFileService(GoogleAuthenticator googleAuthenticator)
+    private bool _isInitialized = false;
+    private readonly GoogleAuthenticator _googleAuthenticator;
+
+    private GoogleDriveFileService(GoogleAuthenticator googleAuthenticator)
     {
         _googleAuthenticator = googleAuthenticator;
+        InitializeDriveServiceAsync().GetAwaiter().GetResult();
     }
+
+    public static GoogleDriveFileService Instance => _instance.Value;
 
     private async Task InitializeDriveServiceAsync()
     {
@@ -32,6 +42,27 @@ public class GoogleDriveFileService : IFileService
         }
     }
 
+    private async Task<string> GetHoudiniFolderIdAsync()
+    {
+        try
+        {
+            // List files and folders in the root directory to find the "Houdini" folder
+            var listRequest = _driveService.Files.List();
+            listRequest.PageSize = 100;
+            listRequest.Fields = "nextPageToken, files(id, name)";
+            listRequest.Q = "name = 'Houdini' and mimeType = 'application/vnd.google-apps.folder'";
+
+            var result = await listRequest.ExecuteAsync();
+            var houdiniFolder = result.Files.FirstOrDefault();
+            return houdiniFolder?.Id;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error finding the Houdini folder: {ex.Message}");
+            return null;
+        }
+    }
+
     public async Task<List<CloudItem>> GetFolderContentsAsync(string folderId = null)
     {
         if (!_isInitialized)
@@ -39,26 +70,28 @@ public class GoogleDriveFileService : IFileService
             return new List<CloudItem>(); // Return an empty list if not initialized
         }
 
+        // If folderId is null, find the Houdini folder ID
+        if (folderId == null)
+        {
+            folderId = await GetHoudiniFolderIdAsync();
+            if (folderId == null)
+            {
+                return new List<CloudItem>(); // Return an empty list if Houdini folder is not found
+            }
+        }
+
         var folderContents = new List<CloudItem>();
         try
         {
-            FilesResource.ListRequest listRequest = _driveService.Files.List();
+            var listRequest = _driveService.Files.List();
             listRequest.PageSize = 100;
             listRequest.Fields = "nextPageToken, files(id, name, mimeType, parents)";
+            listRequest.Q = $"'{folderId}' in parents";
 
-            if (folderId != null)
+            var files = await listRequest.ExecuteAsync();
+            if (files?.Files != null)
             {
-                listRequest.Q = $"'{folderId}' in parents";
-            }
-            else
-            {
-                listRequest.Q = "'root' in parents";
-            }
-
-            var files = listRequest.Execute().Files;
-            if (files != null && files.Count > 0)
-            {
-                foreach (var file in files)
+                foreach (var file in files.Files)
                 {
                     var cloudItem = new CloudItem
                     {
@@ -73,7 +106,6 @@ public class GoogleDriveFileService : IFileService
         catch (Exception ex)
         {
             Console.WriteLine($"Error fetching folder contents: {ex.Message}");
-            // Instead of throwing, return an empty list
             return new List<CloudItem>();
         }
         return folderContents;

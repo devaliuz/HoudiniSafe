@@ -37,12 +37,13 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             Padding="{TemplateBinding Padding}"
                             SnapsToDevicePixels="true">
-                        <StackPanel>
+                        <StackPanel Orientation="Horizontal">
                             <!-- ToggleButton for expanding/collapsing -->
                             <ToggleButton x:Name="Expander"
                                           Style="{StaticResource {x:Static ToolBar.ToggleButtonStyleKey}}"
                                           IsChecked="{Binding Path=IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"
-                                          Content="►" />
+                                          Content="►" 
+                                          VerticalAlignment="Center"/>
                             <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
                         </StackPanel>

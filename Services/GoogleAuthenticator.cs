@@ -1,5 +1,7 @@
-﻿//GoogleAuthenticator.cs
+﻿using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Drive.v3;
 using Google.Apis.Services;
@@ -10,7 +12,17 @@ namespace HoudiniSafe.Services
 {
     public class GoogleAuthenticator : IAuthenticator
     {
+        private static readonly Lazy<GoogleAuthenticator> _instance =
+            new Lazy<GoogleAuthenticator>(() => new GoogleAuthenticator());
+
         private static readonly string[] Scopes = { DriveService.Scope.Drive, DriveService.Scope.DriveFile };
+
+        private GoogleAuthenticator()
+        {
+            // No need to initialize GoogleDriveFileService here
+        }
+
+        public static GoogleAuthenticator Instance => _instance.Value;
 
         public async Task<UserCredential> AuthenticateAsync()
         {

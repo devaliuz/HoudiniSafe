@@ -43,12 +43,14 @@ namespace HoudiniSafe.ViewModel
         private DriveService _driveService;
 
         public GoogleAuthenticator GoogleAuthenticator { get ; }
+        public GoogleDriveFileService GoogleDriveFileService { get; set; }
 
         public SettingsViewModel()
         {
-            GoogleAuthenticator = new GoogleAuthenticator();
+            GoogleAuthenticator = GoogleAuthenticator.Instance;
             ConnectToGoogleDriveCommand = new AsyncRelayCommand(ConnectToGoogleDrive);
             DisconnectFromGoogleDriveCommand = new RelayCommand(DisconnectFromGoogleDrive);
+
         }
 
 
@@ -74,6 +76,13 @@ namespace HoudiniSafe.ViewModel
             {
                 GoogleDriveConnectionStatus = $"Verbindungsfehler: {ex.Message}";
             }
+
+            InitializeDriveService();
+        }
+
+        private void InitializeDriveService()
+        {
+            GoogleDriveFileService = GoogleDriveFileService.Instance;
         }
 
         /// <summary>

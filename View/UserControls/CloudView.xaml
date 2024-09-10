@@ -29,22 +29,25 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Text="Cloud Folder"
-                           HorizontalAlignment="Center"
-                           Style="{StaticResource ModernTextBlockStyle}"
-                           Margin="0,0,0,10"/>
-
-                <TreeView ItemsSource="{Binding CloudFiles}"
+                <!-- TreeView with dynamic height -->
+                <TreeView Grid.Row="1"
+                          ItemsSource="{Binding CloudFiles}"
                           SelectedItemChanged="TreeView_SelectedItemChanged" 
-                          Style="{StaticResource ModernTreeViewStyle}">
+                          Style="{StaticResource ModernTreeViewStyle}"
+                          Margin="10"
+                          services:DragAndDropService.DropCommand="{Binding DropCommand}">
                     <TreeView.ItemTemplate>
                         <HierarchicalDataTemplate ItemsSource="{Binding Items}">
                             <StackPanel Orientation="Horizontal">
+
+                                <TextBlock Text="{Binding Name}"
+                                           Grid.Column="0"
+                                           Foreground="{StaticResource PrimaryTextBrush}"
+                                           HorizontalAlignment="Left"/>
                                 <Image Source="{Binding IsFolder, Converter={StaticResource FolderOrFileIconConverter}}" 
-                                       Margin="0,0,5,0"/>
-                                <TextBlock 
-                                        Text="{Binding Name}" 
-                                        Foreground="{StaticResource PrimaryTextBrush}"/>
+                                       Grid.Column="2"
+                                       Margin="5,0,5,0"
+                                       HorizontalAlignment="Right" Cursor=""/>
                             </StackPanel>
                         </HierarchicalDataTemplate>
                     </TreeView.ItemTemplate>
@@ -59,14 +62,14 @@
                 services:DragAndDropService.DropCommand="{Binding DropCommand}">
             <DockPanel LastChildFill="True">
                 <Button DockPanel.Dock="Top"
-          Content="Alle Dateien entfernen"
-          Command="{Binding ClearFilesCommand}"
-          Style="{StaticResource ModernButtonStyle}"
-          Margin="0,0,0,10"
-          Visibility="{Binding DroppedFiles.Count, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                        Content="Alle Dateien entfernen"
+                        Command="{Binding ClearFilesCommand}"
+                        Style="{StaticResource ModernButtonStyle}"
+                        Margin="0,10,0,10"
+                        Visibility="{Binding DroppedFiles.Count, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{Binding DroppedFiles}"
-                    Margin="10">
+                                  Margin="10">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Grid Margin="0,5">

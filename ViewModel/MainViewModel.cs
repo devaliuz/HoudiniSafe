@@ -217,9 +217,7 @@ namespace HoudiniSafe.ViewModel
             //Init Services
             _encryptionService = new EncryptionService();
             _dialogService = new DialogService();
-            _dialogService = new DialogService();
-            _googleDriveFileService = new GoogleDriveFileService(SettingsViewModel.GoogleAuthenticator);
-           
+            _googleDriveFileService = GoogleDriveFileService.Instance;  // Verwendung der Singleton-Instanz
 
             // Initialize commands
             RemoveFileCommand = new RelayCommand<string>(RemoveFile);
@@ -232,7 +230,6 @@ namespace HoudiniSafe.ViewModel
             DecryptCommand = new AsyncRelayCommand(DecryptAsync);
             OpenSettingsCommand = new RelayCommand(OpenSettings);
             NavigateToFolderCommand = new AsyncRelayCommand<CloudItem>(NavigateToFolderAsync);
-
 
             // Load cloud files
             SettingsViewModel.PropertyChanged += async (sender, e) =>
@@ -502,6 +499,7 @@ namespace HoudiniSafe.ViewModel
                 _dialogService.ShowPopup($"Fehler beim Laden der Cloud-Dateien: {ex.Message}", "Fehler");
             }
         }
+
 
         private async Task LoadFolderContentsAsync(string folderId)
         {

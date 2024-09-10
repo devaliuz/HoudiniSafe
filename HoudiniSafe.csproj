@@ -12,12 +12,20 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Ressources\Icons\file.png" />
+    <None Remove="Ressources\Icons\folder.png" />
     <None Remove="Ressources\Icons\locked.png" />
     <None Remove="Ressources\Icons\open.ico" />
     <None Remove="Ressources\Icons\open.png" />
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="Ressources\Icons\file.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Ressources\Icons\folder.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Ressources\Icons\ico_or.ico" />
   </ItemGroup>
 

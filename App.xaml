@@ -27,6 +27,8 @@
             <!--Images-->
             <BitmapImage x:Key="EncryptIcon" UriSource="pack://application:,,,/Ressources/Icons/locked.png"/>
             <BitmapImage x:Key="DecryptIcon" UriSource="pack://application:,,,/Ressources/Icons/open.png"/>
+            <BitmapImage x:Key="FileIcon" UriSource="pack://application:,,,/Ressources/Icons/file.png"/>
+            <BitmapImage x:Key="FolderIcon" UriSource="pack://application:,,,/Ressources/Icons/folder.png"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
