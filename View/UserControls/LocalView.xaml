@@ -29,8 +29,7 @@
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         Style="{StaticResource ModernTextBlockStyle}"
-                        Visibility="{Binding DroppedFiles.Count,
-                                          Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                        Visibility="{Binding DroppedFiles.Count, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
                 <DockPanel LastChildFill="True">
                     <Button DockPanel.Dock="Top"
                          Content="Alle Dateien entfernen"

@@ -68,6 +68,11 @@
                         Style="{StaticResource ModernButtonStyle}"
                         Margin="0,10,0,10"
                         Visibility="{Binding DroppedFiles.Count, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                <TextBlock  Text="Zu verschlüsselnde Dateien hier ablegen."
+                            VerticalAlignment="Center"
+                            Style="{StaticResource ModernTextBlockStyle}"
+                            Visibility="{Binding DroppedFiles.Count, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                            Margin="50"/>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{Binding DroppedFiles}"
                                   Margin="10">
