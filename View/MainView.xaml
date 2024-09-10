@@ -6,7 +6,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:HoudiniSafe.ViewModel"             
         xmlns:services="clr-namespace:HoudiniSafe.ViewModel.Services"
-        xmlns:userControl="clr-namespace:HoudiniSafe.View"
+        xmlns:userControl="clr-namespace:HoudiniSafe.View.UserControls"
         mc:Ignorable="d"
         Title="HoudiniSafe"
         Height="420"
@@ -15,32 +15,76 @@
         MinWidth="600"
         Style="{StaticResource ModernWindowStyle}"
         WindowStartupLocation="CenterScreen">
-
     <!-- DataContext -->
     <Window.DataContext>
         <vm:MainViewViewModel/>
     </Window.DataContext>
-
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="3*"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="2*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
+
         <!-- Header Section -->
-        <StackPanel Grid.Row="0"
-                 Orientation="Horizontal"
-                 VerticalAlignment="Center"
-                 Margin="20,5">
-            <TextBlock Text="HoudiniSafe"
-                    FontSize="24"
-                    FontWeight="Bold"
-                    Foreground="{StaticResource AccentBrush}"/>
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0"
+                        Orientation="Horizontal"
+                        VerticalAlignment="Center"
+                        Margin="20,5">
+                <TextBlock Text="HoudiniSafe"
+                           FontSize="24"
+                           FontWeight="Bold"
+                           Foreground="{StaticResource AccentBrush}"/>
             </StackPanel>
-            <TabControl Grid.Row="1"
-                        Margin="10,5"
-                        Background="Transparent"
-                        ItemContainerStyle="{StaticResource TabControlStyle}">
+
+            <!-- Settings Icon -->
+            <Button Grid.Column="1"
+                    Width="30"
+                    Height="30"
+                    Margin="10"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Command="{Binding OpenSettingsCommand}">
+                <Path Data="M15.95 10.78c.03-.25.05-.51.05-.78s-.02-.53-.06-.78l1.69-1.32c.15-.12.19-.34.1-.51l-1.6-2.77c-.1-.18-.31-.24-.49-.18l-1.99.8c-.42-.32-.86-.58-1.35-.78L12 2.34c-.03-.2-.2-.34-.4-.34H8.4c-.2 0-.36.14-.39.34l-.3 2.12c-.49.2-.94.47-1.35.78l-1.99-.8c-.18-.07-.39 0-.49.18l-1.6 2.77c-.1.18-.06.39.1.51l1.69 1.32c-.04.25-.07.52-.07.78s.02.53.06.78L2.37 12.1c-.15.12-.19.34-.1.51l1.6 2.77c.1.18.31.24.49.18l1.99-.8c.42.32.86.58 1.35.78l.3 2.12c.04.2.2.34.4.34h3.2c.2 0 .37-.14.39-.34l.3-2.12c.49-.2.94-.47 1.35-.78l1.99.8c.18.07.39 0 .49-.18l1.6-2.77c.1-.18.06-.39-.1-.51l-1.67-1.32zM10 13c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z"
+                      Fill="{StaticResource AccentBrush}"
+                      Stretch="Uniform"/>
+            </Button>
+
+            <!-- Settings Popup -->
+            <Popup x:Name="SettingsPopup"
+                   PlacementTarget="{Binding ElementName=SettingsButton}"
+                   Placement="Bottom"
+                   StaysOpen="False">
+                <Border Background="{StaticResource PrimaryBackgroundBrush}"
+                        BorderBrush="{StaticResource AccentBrush}"
+                        BorderThickness="1"
+                        CornerRadius="5"
+                        Padding="10">
+                    <StackPanel>
+                        <TextBlock Text="Einstellungen"
+                                   FontWeight="Bold"
+                                   Margin="0,0,0,10"
+                                   Foreground="{StaticResource PrimaryTextBrush}"/>
+                        <CheckBox Content="Dunkelmodus"
+                                  IsChecked="{Binding IsDarkMode}"
+                                  Foreground="{StaticResource PrimaryTextBrush}"/>
+                        <!-- Fügen Sie hier weitere Einstellungen hinzu -->
+                    </StackPanel>
+                </Border>
+            </Popup>
+        </Grid>
+
+        <!-- Tab Control -->
+        <TabControl Grid.Row="1"
+                    Margin="10,5"
+                    Background="Transparent"
+                    ItemContainerStyle="{StaticResource TabControlStyle}">
             <TabItem Header="Cloud">
                 <userControl:CloudView/>
             </TabItem>
@@ -50,37 +94,35 @@
         </TabControl>
 
         <!-- Progress Bar Section -->
-
         <StackPanel Grid.Row="2"
                     Margin="5">
             <ProgressBar 
-                      Height="10"
-                      Margin="20,0"
-                      Value="{Binding ProgressValue}"
-                      Visibility="{Binding ProgressVisibility}"/>
-
+                Height="10"
+                Margin="20,0"
+                Value="{Binding ProgressValue}"
+                Visibility="{Binding ProgressVisibility}"/>
             <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Right"
                         Margin="20,10,20,20">
-            <Button Content="Öffnen"
+                <Button Content="Öffnen"
                         Command="{Binding OpenFileCommand}"
                         Style="{StaticResource ModernButtonStyle}"
                         Margin="0,0,5,0"/>
-            <Button Content="Verschlüsseln"
+                <Button Content="Verschlüsseln"
                         Command="{Binding EncryptCommand}"
                         Style="{StaticResource ModernButtonStyle}"
                         Margin="0,0,5,0"
                         IsEnabled="{Binding CanEncrypt}"/>
-            <Button Content="Entschlüsseln"
+                <Button Content="Entschlüsseln"
                         Command="{Binding DecryptCommand}"
                         Style="{StaticResource ModernButtonStyle}"
                         Margin="0,0,5,0"
                         IsEnabled="{Binding CanDecrypt}"/>
-            <Button Content="Über"
+                <Button Content="Über"
                         Command="{Binding AboutCommand}"
                         Style="{StaticResource ModernButtonStyle}"
                         Margin="0,0,5,0"/>
-            <Button Content="Beenden"
+                <Button Content="Beenden"
                         Command="{Binding ExitCommand}"
                         Style="{StaticResource ModernButtonStyle}"
                         Margin="0,0,10,0"/>

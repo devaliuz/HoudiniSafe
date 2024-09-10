@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="HoudiniSafe.View.CloudView"
+﻿<UserControl x:Class="HoudiniSafe.View.UserControls.LocalView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -34,11 +34,10 @@
                 <DockPanel LastChildFill="True">
                     <Button DockPanel.Dock="Top"
                          Content="Alle Dateien entfernen"
-                         Command="{Binding RemoveAllFilesCommand}"
+                         Command="{Binding ClearFilesCommand}"
                          Style="{StaticResource ModernButtonStyle}"
                          Margin="0,0,0,10"
-                         Visibility="{Binding DroppedFiles.Count,
-                                           Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                         Visibility="{Binding DroppedFiles.Count, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <ItemsControl ItemsSource="{Binding DroppedFiles}"
                                    Margin="10">
@@ -66,6 +65,7 @@
                 </DockPanel>
             </Grid>
         </Border>
+
         <!-- Footer Section -->
         <StackPanel Grid.Row="3"
                  Orientation="Horizontal">

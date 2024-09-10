@@ -13,14 +13,14 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace HoudiniSafe.View
+namespace HoudiniSafe.View.UserControls
 {
     /// <summary>
-    /// Interaktionslogik für CloudView.xaml
+    /// Interaktionslogik für LocalView.xaml
     /// </summary>
-    public partial class CloudView : UserControl
+    public partial class LocalView : UserControl
     {
-        public CloudView()
+        public LocalView()
         {
             InitializeComponent();
         }

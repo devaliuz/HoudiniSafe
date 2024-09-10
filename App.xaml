@@ -13,6 +13,7 @@
                 <ResourceDictionary Source="Ressources/Styles/OtherStyles.xaml"/>
                 <ResourceDictionary Source="Ressources/Styles/ModernPasswordBoxStyle.xaml"/>
                 <ResourceDictionary Source="Ressources/Styles/TabControlStyle.xaml"/>
+                <ResourceDictionary Source="Ressources/Styles/ModernListBoxStyle.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             
             <!--Converters-->

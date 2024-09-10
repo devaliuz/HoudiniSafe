@@ -13,14 +13,14 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace HoudiniSafe.View
+namespace HoudiniSafe.View.UserControls
 {
     /// <summary>
-    /// Interaktionslogik für LocalView.xaml
+    /// Interaktionslogik für GoogleDriveSettingsControl.xaml
     /// </summary>
-    public partial class LocalView : UserControl
+    public partial class GoogleDriveSettings : UserControl
     {
-        public LocalView()
+        public GoogleDriveSettings()
         {
             InitializeComponent();
         }

@@ -1,0 +1,29 @@
+﻿<UserControl x:Class="HoudiniSafe.View.UserControls.GoogleDriveSettings"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="Transparent">
+    <StackPanel Margin="10">
+        <TextBlock Text="Google Drive Verbindung"
+                   FontSize="18"
+                   FontWeight="SemiBold"
+                   Margin="0,0,0,10"
+                   Foreground="{StaticResource PrimaryTextBrush}"/>
+
+        <TextBlock Text="Status:"
+                   Margin="0,0,0,5"
+                   Foreground="{StaticResource PrimaryTextBrush}"/>
+        <TextBlock Text="{Binding GoogleDriveConnectionStatus}"
+                   Margin="0,0,0,10"
+                   Foreground="{StaticResource AccentBrush}"/>
+
+        <Button Content="Mit Google Drive verbinden"
+                Command="{Binding ConnectToGoogleDriveCommand}"
+                Style="{StaticResource ModernButtonStyle}"
+                Margin="0,0,0,10"/>
+
+        <Button Content="Verbindung trennen"
+                Command="{Binding DisconnectFromGoogleDriveCommand}"
+                Style="{StaticResource ModernButtonStyle}"
+                Visibility="{Binding IsGoogleDriveConnected, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+    </StackPanel>
+</UserControl>

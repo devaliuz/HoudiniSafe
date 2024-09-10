@@ -1,19 +1,20 @@
-﻿// MainViewViewModel.cs
-using HoudiniSafe.ViewModel.Services;
+﻿using HoudiniSafe.ViewModel.Services;
 using HoudiniSafe.ViewModel.Commands;
+using System;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using System.Windows;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Win32;
 using HoudiniSafe.View;
 using Microsoft.WindowsAPICodePack.Dialogs;
 
-
 namespace HoudiniSafe.ViewModel
 {
     /// <summary>
-    /// ViewModel for the main view, handling file encryption and decryption operations.
+    /// ViewModel for the main view, handling file encryption and decryption operations for both local and cloud storage.
     /// </summary>
     public class MainViewViewModel : ViewModelBase
     {
@@ -28,6 +29,9 @@ namespace HoudiniSafe.ViewModel
         // Collection of files or folders that have been dropped into the view
         private ObservableCollection<string> _droppedFiles;
 
+        // Collection of files in the cloud
+        private ObservableCollection<string> _cloudFiles;
+
         // Progress value for the encryption or decryption process
         private double _progressValue;
 
@@ -36,6 +40,10 @@ namespace HoudiniSafe.ViewModel
 
         // Whether to replace the original file or not
         private bool _replaceOriginal;
+        
+        //Wether Darkmode is Enabled or not
+        private bool _isDarkMode;
+
 
         #endregion
 
@@ -51,11 +59,19 @@ namespace HoudiniSafe.ViewModel
             {
                 if (SetProperty(ref _droppedFiles, value))
                 {
-                    // Update dependent properties when DroppedFiles changes
                     OnPropertyChanged(nameof(CanEncrypt));
                     OnPropertyChanged(nameof(CanDecrypt));
                 }
             }
+        }
+
+        /// <summary>
+        /// Gets or sets the collection of cloud files.
+        /// </summary>
+        public ObservableCollection<string> CloudFiles
+        {
+            get => _cloudFiles;
+            set => SetProperty(ref _cloudFiles, value);
         }
 
         /// <summary>
@@ -84,6 +100,35 @@ namespace HoudiniSafe.ViewModel
             get => _replaceOriginal;
             set => SetProperty(ref _replaceOriginal, value);
         }
+
+        /// <summary>
+        /// Gets or sets whether Darkmode is enabled or not.
+        /// </summary>
+        public bool IsDarkMode
+        {
+            get => _isDarkMode;
+            set => SetProperty(ref _isDarkMode, value);
+        }
+
+        /// <summary>
+        /// Determines if files can be encrypted based on the state of DroppedFiles.
+        /// </summary>
+        public bool CanEncrypt => DroppedFiles != null && DroppedFiles.Count > 0 && DroppedFiles.All(file => !file.EndsWith(".enc"));
+
+        /// <summary>
+        /// Determines if files can be decrypted based on the state of DroppedFiles.
+        /// </summary>
+        public bool CanDecrypt => DroppedFiles != null && DroppedFiles.Count == 1 && DroppedFiles[0].EndsWith(".enc");
+
+        /// <summary>
+        /// Initialize the SettingsViewModel
+        /// </summary>
+        public SettingsViewModel SettingsViewModel { get; }
+
+
+        #endregion
+
+        #region Commands
 
         /// <summary>
         /// Command for opening files.
@@ -123,17 +168,13 @@ namespace HoudiniSafe.ViewModel
         /// <summary>
         /// Command for removing all files from the list.
         /// </summary>
-        public ICommand RemoveAllFilesCommand { get; }
+        public ICommand ClearFilesCommand { get; }
 
         /// <summary>
-        /// Determines if files can be encrypted based on the state of DroppedFiles.
+        /// Opens Settings
         /// </summary>
-        public bool CanEncrypt => DroppedFiles != null && DroppedFiles.Count > 0 && DroppedFiles.All(file => !file.EndsWith(".enc"));
+        public ICommand OpenSettingsCommand { get; }
 
-        /// <summary>
-        /// Determines if files can be decrypted based on the state of DroppedFiles.
-        /// </summary>
-        public bool CanDecrypt => DroppedFiles != null && DroppedFiles.Count == 1 && DroppedFiles[0].EndsWith(".enc");
 
         #endregion
 
@@ -147,16 +188,24 @@ namespace HoudiniSafe.ViewModel
             _encryptionService = new EncryptionService();
             _dialogService = new DialogService();
             DroppedFiles = new ObservableCollection<string>();
+            CloudFiles = new ObservableCollection<string>();
+
+            SettingsViewModel = new SettingsViewModel();
+
 
             // Initialize commands
             RemoveFileCommand = new RelayCommand<string>(RemoveFile);
-            RemoveAllFilesCommand = new RelayCommand(RemoveAllFiles);
+            ClearFilesCommand = new RelayCommand(ClearFiles);
             OpenFileCommand = new RelayCommand(OpenFile);
             ExitCommand = new RelayCommand(Exit);
             AboutCommand = new RelayCommand(ShowAbout);
             DropCommand = new RelayCommand<DragEventArgs>(HandleDrop);
             EncryptCommand = new AsyncRelayCommand(EncryptAsync);
             DecryptCommand = new AsyncRelayCommand(DecryptAsync);
+            OpenSettingsCommand = new RelayCommand(OpenSettings);
+
+            // Load cloud files
+            LoadCloudFiles();
         }
 
         #endregion
@@ -184,6 +233,19 @@ namespace HoudiniSafe.ViewModel
         /// Shows the About dialog.
         /// </summary>
         private void ShowAbout() => _dialogService.ShowPopup("HoudiniSafe - Sicheres Verschlüsselungstool", "Über");
+
+        /// <summary>
+        /// Open Settings
+        /// </summary>
+        private void OpenSettings()
+        {
+            var settingsView = new SettingsView
+            {
+                DataContext = SettingsViewModel,
+                Owner = Application.Current.MainWindow
+            };
+            settingsView.ShowDialog();
+        }
 
         /// <summary>
         /// Handles file drop operations and adds dropped files to DroppedFiles.
@@ -220,18 +282,15 @@ namespace HoudiniSafe.ViewModel
         /// <param name="file">The file path to remove.</param>
         private void RemoveFile(string file)
         {
-            if (DroppedFiles.Contains(file))
-            {
-                DroppedFiles.Remove(file);
-                OnPropertyChanged(nameof(CanEncrypt));
-                OnPropertyChanged(nameof(CanDecrypt));
-            }
+            DroppedFiles.Remove(file);
+            OnPropertyChanged(nameof(CanEncrypt));
+            OnPropertyChanged(nameof(CanDecrypt));
         }
 
         /// <summary>
         /// Removes all files from the DroppedFiles collection.
         /// </summary>
-        private void RemoveAllFiles()
+        private void ClearFiles()
         {
             DroppedFiles.Clear();
             OnPropertyChanged(nameof(CanEncrypt));
@@ -279,7 +338,7 @@ namespace HoudiniSafe.ViewModel
         /// Performs the encryption process and updates the progress.
         /// </summary>
         /// <param name="password">The password for encryption.</param>
-        /// <param name="outputFile">The path where the encrypted file will be saved.</param>
+        /// <param name="outputFolder">The folder where encrypted files will be saved.</param>
         private async Task PerformEncryptionAsync(string password, string outputFolder)
         {
             ProgressVisibility = Visibility.Visible;
@@ -290,7 +349,7 @@ namespace HoudiniSafe.ViewModel
             {
                 await EncryptFilesAsync(password, outputFolder, progress);
                 _dialogService.ShowPopup("Verschlüsselung erfolgreich abgeschlossen.", "Erfolg", "EncryptIcon");
-                DroppedFiles.Clear();
+                ClearFiles();
             }
             catch (Exception ex)
             {
@@ -306,7 +365,7 @@ namespace HoudiniSafe.ViewModel
         /// Encrypts files or folders based on the DroppedFiles collection.
         /// </summary>
         /// <param name="password">The password for encryption.</param>
-        /// <param name="outputFile">The path where the encrypted file will be saved.</param>
+        /// <param name="outputFolder">The folder where encrypted files will be saved.</param>
         /// <param name="progress">Progress reporting for the encryption process.</param>
         private async Task EncryptFilesAsync(string password, string outputFolder, IProgress<double> progress)
         {
@@ -338,10 +397,10 @@ namespace HoudiniSafe.ViewModel
             string password = ShowPasswordDialog("Passwort für Entschlüsselung eingeben");
             if (string.IsNullOrEmpty(password)) return;
 
-            string outputFile = GetOutputFolderPath();
-            if (string.IsNullOrEmpty(outputFile)) return;
+            string outputFolder = GetOutputFolderPath();
+            if (string.IsNullOrEmpty(outputFolder)) return;
 
-            await PerformDecryptionAsync(password, outputFile);
+            await PerformDecryptionAsync(password, outputFolder);
         }
 
         /// <summary>
@@ -362,8 +421,8 @@ namespace HoudiniSafe.ViewModel
         /// Performs the decryption process and updates the progress.
         /// </summary>
         /// <param name="password">The password for decryption.</param>
-        /// <param name="outputFile">The path where the decrypted file will be saved.</param>
-        private async Task PerformDecryptionAsync(string password, string outputFile)
+        /// <param name="outputFolder">The folder where decrypted files will be saved.</param>
+        private async Task PerformDecryptionAsync(string password, string outputFolder)
         {
             ProgressVisibility = Visibility.Visible;
             ProgressValue = 0;
@@ -371,9 +430,9 @@ namespace HoudiniSafe.ViewModel
 
             try
             {
-                await _encryptionService.DecryptFileAsync(DroppedFiles[0], outputFile, password, progress, ReplaceOriginal);
+                await _encryptionService.DecryptFileAsync(DroppedFiles[0], outputFolder, password, progress, ReplaceOriginal);
                 _dialogService.ShowPopup("Entschlüsselung erfolgreich abgeschlossen.", "Erfolg", "DecryptIcon");
-                DroppedFiles.Clear();
+                ClearFiles();
             }
             catch (Exception ex)
             {
@@ -387,10 +446,23 @@ namespace HoudiniSafe.ViewModel
 
         #endregion
 
+        #region Cloud Operations
+
+        /// <summary>
+        /// Loads the list of files from the cloud storage.
+        /// </summary>
+        private void LoadCloudFiles()
+        {
+            // TODO: Implement cloud file loading logic
+            // This method should populate the CloudFiles collection with the list of files from the cloud storage
+        }
+
+        #endregion
+
         #region Helper Methods
 
         /// <summary>
-        /// Gets the output file path based on the ReplaceOriginal property.
+        /// Gets the output folder path based on the ReplaceOriginal property.
         /// </summary>
         /// <returns>The path where the file will be saved.</returns>
         private string GetOutputFolderPath()
