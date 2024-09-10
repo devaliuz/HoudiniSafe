@@ -1,10 +1,10 @@
-﻿// DialogService.cs
-
+﻿//DialogService.cs
 using System.Windows;
 using System.Windows.Media;
 using HoudiniSafe.View;
+using HoudiniSafe.ViewModel;
 
-namespace HoudiniSafe.ViewModel.Services
+namespace HoudiniSafe.Services
 {
     /// <summary>
     /// Provides methods for displaying dialogs and popups within the application.

@@ -1,4 +1,4 @@
-﻿//*InverseBooleanToVisibilityConverter.cs
+﻿//InverseBooleanToVisibilityConverter.cs
 using System;
 using System.Globalization;
 using System.Windows;

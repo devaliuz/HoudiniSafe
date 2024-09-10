@@ -5,7 +5,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:HoudiniSafe.ViewModel"             
-        xmlns:services="clr-namespace:HoudiniSafe.ViewModel.Services"
+        xmlns:services="clr-namespace:HoudiniSafe.Services"
         xmlns:userControl="clr-namespace:HoudiniSafe.View.UserControls"
         mc:Ignorable="d"
         Title="HoudiniSafe"
@@ -17,7 +17,7 @@
         WindowStartupLocation="CenterScreen">
     <!-- DataContext -->
     <Window.DataContext>
-        <vm:MainViewViewModel/>
+        <vm:MainViewModel/>
     </Window.DataContext>
     <Grid>
         <Grid.RowDefinitions>
@@ -81,9 +81,9 @@
         </Grid>
 
         <!-- Tab Control -->
-        <TabControl Grid.Row="1"
-                    Margin="10,5"
-                    Background="Transparent"
+        <TabControl Grid.Row="1" 
+                    Margin="10,5" 
+                    Background="Transparent" 
                     ItemContainerStyle="{StaticResource TabControlStyle}">
             <TabItem Header="Cloud">
                 <userControl:CloudView/>

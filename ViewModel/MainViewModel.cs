@@ -1,14 +1,12 @@
-﻿using HoudiniSafe.ViewModel.Services;
+﻿using HoudiniSafe.Services;
 using HoudiniSafe.ViewModel.Commands;
-using System;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using System.Windows;
 using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.Win32;
 using HoudiniSafe.View;
+using HoudiniSafe.Models;
 using Microsoft.WindowsAPICodePack.Dialogs;
 
 namespace HoudiniSafe.ViewModel
@@ -16,7 +14,7 @@ namespace HoudiniSafe.ViewModel
     /// <summary>
     /// ViewModel for the main view, handling file encryption and decryption operations for both local and cloud storage.
     /// </summary>
-    public class MainViewViewModel : ViewModelBase
+    public class MainViewModel : ViewModelBase
     {
         #region Fields
 
@@ -26,11 +24,17 @@ namespace HoudiniSafe.ViewModel
         // Service used for showing dialogs
         private readonly DialogService _dialogService;
 
+        // Service used for Google Drive operations
+        private readonly GoogleDriveFileService _googleDriveFileService;
+
         // Collection of files or folders that have been dropped into the view
         private ObservableCollection<string> _droppedFiles;
 
         // Collection of files in the cloud
-        private ObservableCollection<string> _cloudFiles;
+        private ObservableCollection<CloudItem> _cloudFiles;
+
+        //Single selected CloudItem
+        private CloudItem _selectedCloudItem;
 
         // Progress value for the encryption or decryption process
         private double _progressValue;
@@ -40,10 +44,12 @@ namespace HoudiniSafe.ViewModel
 
         // Whether to replace the original file or not
         private bool _replaceOriginal;
-        
+
         //Wether Darkmode is Enabled or not
         private bool _isDarkMode;
 
+        //Holds the SettingsViewModel
+        //private readonly SettingsViewModel _settingsViewModel;
 
         #endregion
 
@@ -68,10 +74,26 @@ namespace HoudiniSafe.ViewModel
         /// <summary>
         /// Gets or sets the collection of cloud files.
         /// </summary>
-        public ObservableCollection<string> CloudFiles
+        public ObservableCollection<CloudItem> CloudFiles
         {
             get => _cloudFiles;
-            set => SetProperty(ref _cloudFiles, value);
+            set
+            {
+                _cloudFiles = value;
+                OnPropertyChanged(nameof(CloudFiles));
+            }
+        }
+        /// <summary>
+        /// Single selected CloudItem
+        /// </summary>
+        public CloudItem SelectedCloudItem
+        {
+            get => _selectedCloudItem;
+            set
+            {
+                _selectedCloudItem = value;
+                OnPropertyChanged(nameof(SelectedCloudItem));
+            }
         }
 
         /// <summary>
@@ -125,7 +147,6 @@ namespace HoudiniSafe.ViewModel
         /// </summary>
         public SettingsViewModel SettingsViewModel { get; }
 
-
         #endregion
 
         #region Commands
@@ -175,23 +196,30 @@ namespace HoudiniSafe.ViewModel
         /// </summary>
         public ICommand OpenSettingsCommand { get; }
 
+        /// <summary>
+        /// Command for navigating Folders
+        /// </summary>
+        public ICommand NavigateToFolderCommand { get; }
 
         #endregion
 
         #region Constructor
 
         /// <summary>
-        /// Initializes a new instance of the MainViewViewModel class.
+        /// Initializes a new instance of the MainViewModel class.
         /// </summary>
-        public MainViewViewModel()
+        public MainViewModel()
         {
+            SettingsViewModel = new SettingsViewModel();
+            CloudFiles = new ObservableCollection<CloudItem>();
+            DroppedFiles = new ObservableCollection<string>();
+
+            //Init Services
             _encryptionService = new EncryptionService();
             _dialogService = new DialogService();
-            DroppedFiles = new ObservableCollection<string>();
-            CloudFiles = new ObservableCollection<string>();
-
-            SettingsViewModel = new SettingsViewModel();
-
+            _dialogService = new DialogService();
+            _googleDriveFileService = new GoogleDriveFileService(SettingsViewModel.GoogleAuthenticator);
+           
 
             // Initialize commands
             RemoveFileCommand = new RelayCommand<string>(RemoveFile);
@@ -203,9 +231,17 @@ namespace HoudiniSafe.ViewModel
             EncryptCommand = new AsyncRelayCommand(EncryptAsync);
             DecryptCommand = new AsyncRelayCommand(DecryptAsync);
             OpenSettingsCommand = new RelayCommand(OpenSettings);
+            NavigateToFolderCommand = new AsyncRelayCommand<CloudItem>(NavigateToFolderAsync);
+
 
             // Load cloud files
-            LoadCloudFiles();
+            SettingsViewModel.PropertyChanged += async (sender, e) =>
+            {
+                if (e.PropertyName == nameof(SettingsViewModel.IsGoogleDriveConnected))
+                {
+                    await UpdateCloudFilesVisibilityAsync();
+                }
+            };
         }
 
         #endregion
@@ -448,13 +484,66 @@ namespace HoudiniSafe.ViewModel
 
         #region Cloud Operations
 
-        /// <summary>
-        /// Loads the list of files from the cloud storage.
-        /// </summary>
-        private void LoadCloudFiles()
+        private async Task LoadCloudFilesAsync()
         {
-            // TODO: Implement cloud file loading logic
-            // This method should populate the CloudFiles collection with the list of files from the cloud storage
+            if (!SettingsViewModel.IsGoogleDriveConnected)
+            {
+                CloudFiles.Clear();
+                return;
+            }
+
+            try
+            {
+                var cloudItems = await _googleDriveFileService.GetFolderContentsAsync();
+                UpdateCloudFiles(cloudItems);
+            }
+            catch (Exception ex)
+            {
+                _dialogService.ShowPopup($"Fehler beim Laden der Cloud-Dateien: {ex.Message}", "Fehler");
+            }
+        }
+
+        private async Task LoadFolderContentsAsync(string folderId)
+        {
+            if (!SettingsViewModel.IsGoogleDriveConnected)
+            {
+                CloudFiles.Clear();
+                return;
+            }
+
+            try
+            {
+                var folderContents = await _googleDriveFileService.GetFolderContentsAsync(folderId);
+                UpdateCloudFiles(folderContents);
+            }
+            catch (Exception ex)
+            {
+                _dialogService.ShowPopup($"Fehler beim Laden des Ordnerinhalts: {ex.Message}", "Fehler");
+            }
+        }
+
+        /// <summary>
+        /// Updates the CloudFiles collection with the new list of CloudItems.
+        /// </summary>
+        /// <param name="cloudItems">The list of CloudItems to update with.</param>
+        private void UpdateCloudFiles(List<CloudItem> cloudItems)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                CloudFiles.Clear();
+                foreach (var item in cloudItems)
+                {
+                    CloudFiles.Add(item);
+                }
+            });
+        }
+
+        private async Task NavigateToFolderAsync(CloudItem folder)
+        {
+            if (folder != null && folder.IsFolder)
+            {
+                await LoadFolderContentsAsync(folder.Id);
+            }
         }
 
         #endregion
@@ -475,6 +564,18 @@ namespace HoudiniSafe.ViewModel
             else
             {
                 return GetSaveFolderPath();
+            }
+        }
+
+        private async Task UpdateCloudFilesVisibilityAsync()
+        {
+            if (SettingsViewModel.IsGoogleDriveConnected)
+            {
+                await LoadCloudFilesAsync();
+            }
+            else
+            {
+                CloudFiles.Clear();
             }
         }
 

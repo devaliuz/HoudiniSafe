@@ -14,6 +14,7 @@
                 <ResourceDictionary Source="Ressources/Styles/ModernPasswordBoxStyle.xaml"/>
                 <ResourceDictionary Source="Ressources/Styles/TabControlStyle.xaml"/>
                 <ResourceDictionary Source="Ressources/Styles/ModernListBoxStyle.xaml"/>
+                <ResourceDictionary Source="Ressources/Styles/ModernTreeViewStyle.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             
             <!--Converters-->
@@ -21,6 +22,7 @@
             <converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
             <converters:FilePathToNameConverter x:Key="FilePathToNameConverter"/>
             <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+            <converters:FolderOrFileIconConverter x:Key="FolderOrFileIconConverter"/>
 
             <!--Images-->
             <BitmapImage x:Key="EncryptIcon" UriSource="pack://application:,,,/Ressources/Icons/locked.png"/>

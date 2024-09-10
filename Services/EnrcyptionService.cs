@@ -1,11 +1,12 @@
-﻿using System.IO;
+﻿//EncryptionService.cs
+using System.IO;
 using System.Security.Cryptography;
 using System.IO.Compression;
 using System.Text;
 using System.Security;
 using System.Runtime.InteropServices;
 
-namespace HoudiniSafe.ViewModel.Services
+namespace HoudiniSafe.Services
 {
     /// <summary>
     /// Provides encryption and decryption services for files and folders with improved memory management.

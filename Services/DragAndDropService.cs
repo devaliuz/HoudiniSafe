@@ -1,8 +1,8 @@
-﻿// DragAndDropService.cs
+﻿//DragAndDropService.cs
 using System.Windows;
 using System.Windows.Input;
 
-namespace HoudiniSafe.ViewModel.Services
+namespace HoudiniSafe.Services
 {
     /// <summary>
     /// Provides methods and attached properties for implementing drag-and-drop functionality in WPF.

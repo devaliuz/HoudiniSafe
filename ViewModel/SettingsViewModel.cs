@@ -3,7 +3,8 @@ using Google.Apis.Auth.OAuth2;
 using Google.Apis.Drive.v3;
 using System.IO;
 using HoudiniSafe.ViewModel.Commands;
-using HoudiniSafe.ViewModel.Services;
+using HoudiniSafe.Services;
+using Google.Apis.Services;
 
 namespace HoudiniSafe.ViewModel
 {
@@ -11,8 +12,8 @@ namespace HoudiniSafe.ViewModel
     {
         private readonly GoogleAuthenticator _googleAuthenticator;
 
-        private const string HoudiniFolderName = "Houdini";
-        private string _houdiniFolderId;
+        public const string HoudiniFolderName = "Houdini";
+        public string _houdiniFolderId;
 
 
         private bool _isDarkMode;
@@ -41,23 +42,33 @@ namespace HoudiniSafe.ViewModel
 
         private DriveService _driveService;
 
+        public GoogleAuthenticator GoogleAuthenticator { get ; }
+
         public SettingsViewModel()
         {
-            _googleAuthenticator = new GoogleAuthenticator();
+            GoogleAuthenticator = new GoogleAuthenticator();
             ConnectToGoogleDriveCommand = new AsyncRelayCommand(ConnectToGoogleDrive);
             DisconnectFromGoogleDriveCommand = new RelayCommand(DisconnectFromGoogleDrive);
         }
+
 
         private async Task ConnectToGoogleDrive()
         {
             try
             {
-                UserCredential credential = await _googleAuthenticator.AuthenticateAsync();
-                _driveService = _googleAuthenticator.CreateDriveService(credential);
-
+                UserCredential credential = await GoogleAuthenticator.AuthenticateAsync();
+                _driveService = GoogleAuthenticator.CreateDriveService(credential);
                 IsGoogleDriveConnected = true;
-                GoogleDriveConnectionStatus = "Verbunden";
-                EnsureHoudiniFolderExistsAsync();
+
+                // Hole die tatsächliche E-Mail-Adresse des Benutzers
+                var aboutRequest = _driveService.About.Get();
+                aboutRequest.Fields = "user";
+                var about = await aboutRequest.ExecuteAsync();
+                string userEmail = about.User.EmailAddress;
+                string displayName = about.User.DisplayName;
+
+                GoogleDriveConnectionStatus = $"Verbunden als : {displayName}\n{userEmail}";
+                await EnsureHoudiniFolderExistsAsync();
             }
             catch (Exception ex)
             {

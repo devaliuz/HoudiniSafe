@@ -1,17 +1,16 @@
-﻿using System;
+﻿//GoogleAuthenticator.cs
 using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Drive.v3;
 using Google.Apis.Services;
 using Google.Apis.Util.Store;
+using HoudiniSafe.Interfaces;
 
-namespace HoudiniSafe.ViewModel.Services
+namespace HoudiniSafe.Services
 {
-    public class GoogleAuthenticator
+    public class GoogleAuthenticator : IAuthenticator
     {
-        private static readonly string[] Scopes = { DriveService.Scope.Drive };
+        private static readonly string[] Scopes = { DriveService.Scope.Drive, DriveService.Scope.DriveFile };
 
         public async Task<UserCredential> AuthenticateAsync()
         {
