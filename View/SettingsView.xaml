@@ -3,8 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:HoudiniSafe.View.UserControls"
         Title="Einstellungen"
-        Height="500"
+        Height="440"
         Width="600"
+        ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
         Style="{StaticResource ModernWindowStyle}">
     <Grid Margin="20">
@@ -21,33 +22,32 @@
                    Foreground="{StaticResource PrimaryTextBrush}"/>
 
         <TabControl Grid.Row="1" 
-                    Background="Transparent"
-                    ItemContainerStyle="{StaticResource TabControlStyle}">
-            <TabItem Header="Allgemein">
-                <StackPanel Margin="10">
-                    <CheckBox Content="Dunkelmodus"
-                              IsChecked="{Binding IsDarkMode}"
-                              Margin="0,0,0,10"
-                              Foreground="{StaticResource PrimaryTextBrush}"/>
-                    <!-- Andere allgemeine Einstellungen hier -->
-                </StackPanel>
-            </TabItem>
-            <TabItem Header="Cloud-Verbindung">
-                <TabControl Background="Transparent"
-                            ItemContainerStyle="{StaticResource TabControlStyle}">
-                    <TabItem Header="Google Drive">
-                        <local:GoogleDriveSettings DataContext="{Binding}"/>
-                    </TabItem>
-                    <!--<TabItem Header="OneDrive">
-                        <local:OneDriveSettings/>
-                    </TabItem>
-                    <TabItem Header="Anderer Clouddienst">
-                        <local:OtherCloudSettings/>
-                    </TabItem>-->
-                </TabControl>
-            </TabItem>
-        </TabControl>
+                        Background="Transparent"
+                        ItemContainerStyle="{StaticResource TabControlStyle}">
+            <TabItem Header="Allgemeines">
 
+            </TabItem>
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Google Drive"
+                                   VerticalAlignment="Center"/>
+                        <Image Source="{StaticResource GoogleDriveIcon}"
+                               VerticalAlignment="Center"
+                               Height="24"
+                               Stretch="Uniform"
+                               Margin="0,0,5,0"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <local:GoogleDriveSettings DataContext="{Binding}"/>
+            </TabItem>
+            <!--<TabItem Header="OneDrive">
+                    <local:OneDriveSettings/>
+                </TabItem>
+                <TabItem Header="Anderer Clouddienst">
+                    <local:OtherCloudSettings/>
+                </TabItem>-->
+        </TabControl>
         <Button Grid.Row="2"
                 Content="Schließen"
                 Click="CloseButton_Click"
