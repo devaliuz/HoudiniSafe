@@ -15,4 +15,17 @@
     <SolidColorBrush x:Key="SecondaryTextBrush" Color="{StaticResource SecondaryTextColor}"/>
     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
     <SolidColorBrush x:Key="AccentBrushLight" Color="{StaticResource AccentColorLight}"/>
+
+    <!-- New ProgressBar colors -->
+    <Color x:Key="ProgressBarBackgroundColor_Light">#E0E0E0</Color>
+    <Color x:Key="ProgressBarForegroundColor_Light">#1E88E5</Color>
+    <Color x:Key="ProgressBarBackgroundColor_Dark">#424242</Color>
+    <Color x:Key="ProgressBarForegroundColor_Dark">#64B5F6</Color>
+
+    <!-- New ProgressBar Brushes -->
+    <SolidColorBrush x:Key="ProgressBarBackgroundBrush_Light" Color="{StaticResource ProgressBarBackgroundColor_Light}"/>
+    <SolidColorBrush x:Key="ProgressBarForegroundBrush_Light" Color="{StaticResource ProgressBarForegroundColor_Light}"/>
+    <SolidColorBrush x:Key="ProgressBarBackgroundBrush_Dark" Color="{StaticResource ProgressBarBackgroundColor_Dark}"/>
+    <SolidColorBrush x:Key="ProgressBarForegroundBrush_Dark" Color="{StaticResource ProgressBarForegroundColor_Dark}"/>
+
 </ResourceDictionary>

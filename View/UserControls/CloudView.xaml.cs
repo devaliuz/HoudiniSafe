@@ -17,8 +17,10 @@ namespace HoudiniSafe.View.UserControls
 
         private void TreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
-            //var viewModel = (MainViewModel)DataContext;
-            //viewModel.SelectedCloudItem = e.NewValue as CloudItem;
+            if (DataContext is MainViewModel viewModel)
+            {
+                viewModel.SelectedCloudItem = e.NewValue as CloudItem;
+            }
         }
     }
 }

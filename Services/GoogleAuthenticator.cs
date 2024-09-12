@@ -1,7 +1,5 @@
-﻿using System;
+﻿//GoogleAuthenticator.cs
 using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Drive.v3;
 using Google.Apis.Services;

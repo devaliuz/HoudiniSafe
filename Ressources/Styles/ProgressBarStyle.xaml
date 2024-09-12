@@ -1,0 +1,21 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Style x:Key="ThemedProgressBarStyle" TargetType="ProgressBar">
+        <Setter Property="Background" Value="{DynamicResource ProgressBarBackgroundBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ProgressBarForegroundBrush}"/>
+        <Setter Property="Height" Value="20"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ProgressBar">
+                    <Grid x:Name="TemplateRoot" SnapsToDevicePixels="true">
+                        <Rectangle Fill="{TemplateBinding Background}" RadiusX="2" RadiusY="2"/>
+                        <Rectangle x:Name="PART_Track" Margin="0"/>
+                        <Decorator x:Name="PART_Indicator" HorizontalAlignment="Left">
+                            <Rectangle x:Name="Indicator" Fill="{TemplateBinding Foreground}" RadiusX="2" RadiusY="2"/>
+                        </Decorator>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

@@ -9,6 +9,7 @@ using HoudiniSafe.View;
 using HoudiniSafe.Models;
 using Microsoft.WindowsAPICodePack.Dialogs;
 using HoudiniSafe.Enums;
+using System.IO.Packaging;
 
 namespace HoudiniSafe.ViewModel
 {
@@ -52,6 +53,11 @@ namespace HoudiniSafe.ViewModel
         //Mirrors Active Tab
         private TabType _activeTab;
 
+        private ICommand _decryptCommand;
+
+        private string _progressMessage;
+
+
 
         #endregion
 
@@ -79,12 +85,9 @@ namespace HoudiniSafe.ViewModel
         public ObservableCollection<CloudItem> CloudFiles
         {
             get => _cloudFiles;
-            set
-            {
-                _cloudFiles = value;
-                OnPropertyChanged(nameof(CloudFiles));
-            }
+            set => SetProperty(ref _cloudFiles, value);
         }
+
         /// <summary>
         /// Single selected CloudItem
         /// </summary>
@@ -93,8 +96,10 @@ namespace HoudiniSafe.ViewModel
             get => _selectedCloudItem;
             set
             {
-                _selectedCloudItem = value;
-                OnPropertyChanged(nameof(SelectedCloudItem));
+                if (SetProperty(ref _selectedCloudItem, value))
+                {
+                    OnPropertyChanged(nameof(CanDecrypt));
+                }
             }
         }
 
@@ -142,7 +147,21 @@ namespace HoudiniSafe.ViewModel
         /// <summary>
         /// Determines if files can be decrypted based on the state of DroppedFiles.
         /// </summary>
-        public bool CanDecrypt => DroppedFiles != null && DroppedFiles.Count == 1 && DroppedFiles[0].EndsWith(".enc");
+        public bool CanDecrypt
+        {
+            get
+            {
+                if (ActiveTab == TabType.Local)
+                {
+                    return DroppedFiles != null && DroppedFiles.Count == 1 && DroppedFiles[0].EndsWith(".enc");
+                }
+                else if (ActiveTab == TabType.Cloud)
+                {
+                    return SelectedCloudItem != null && !SelectedCloudItem.IsFolder && SelectedCloudItem.Name.EndsWith(".enc");
+                }
+                return false;
+            }
+        }
 
 
         /// <summary>
@@ -157,6 +176,12 @@ namespace HoudiniSafe.ViewModel
         {
             get => _activeTab;
             set => SetProperty(ref _activeTab, value);
+        }
+
+        public string ProgressMessage
+        {
+            get => _progressMessage;
+            set => SetProperty(ref _progressMessage, value);
         }
 
         #endregion
@@ -191,7 +216,7 @@ namespace HoudiniSafe.ViewModel
         /// <summary>
         /// Command for decrypting files.
         /// </summary>
-        public ICommand DecryptCommand { get; }
+        public ICommand DecryptCommand => _decryptCommand ??= new AsyncRelayCommand(DecryptAsync, () => CanDecrypt);
 
         /// <summary>
         /// Command for removing a specific file from the list.
@@ -239,7 +264,7 @@ namespace HoudiniSafe.ViewModel
             AboutCommand = new RelayCommand(ShowAbout);
             DropCommand = new RelayCommand<DragEventArgs>(HandleDrop);
             EncryptCommand = new AsyncRelayCommand(EncryptAsync);
-            DecryptCommand = new AsyncRelayCommand(DecryptAsync);
+            //DecryptCommand = new AsyncRelayCommand(DecryptAsync);
             OpenSettingsCommand = new RelayCommand(OpenSettings);
             NavigateToFolderCommand = new AsyncRelayCommand<CloudItem>(NavigateToFolderAsync);
 
@@ -356,17 +381,39 @@ namespace HoudiniSafe.ViewModel
             string password = ShowPasswordDialog("Passwort für Verschlüsselung eingeben");
             if (string.IsNullOrEmpty(password)) return;
 
-            string outputFolder = GetOutputFolderPath();
+            string outputFolder = GetOutputFolderPathForEncryption();
             if (string.IsNullOrEmpty(outputFolder)) return;
 
             // Ensure the output folder exists
             Directory.CreateDirectory(outputFolder);
 
+            ProgressMessage = "Verschlüssele Dateien...";
+            ProgressVisibility = Visibility.Visible;
             await PerformEncryptionAsync(password, outputFolder);
 
             if (ActiveTab == TabType.Cloud)
             {
+                ProgressMessage = "Lade verschlüsselte Dateien hoch...";
                 await UploadToCloudAsync(outputFolder);
+            }
+
+            ProgressVisibility = Visibility.Collapsed;
+        }
+
+        private string GetOutputFolderPathForEncryption()
+        {
+            if (ActiveTab == TabType.Cloud)
+            {
+                // Use a temporary folder for cloud encryption
+                return Path.Combine(Path.GetTempPath(), "HoudiniSafeTemp");
+            }
+            else if (ReplaceOriginal && DroppedFiles.Count > 0)
+            {
+                return Path.GetDirectoryName(DroppedFiles[0]);
+            }
+            else
+            {
+                return GetSaveFolderPath();
             }
         }
 
@@ -391,9 +438,12 @@ namespace HoudiniSafe.ViewModel
         /// <param name="outputFolder">The folder where encrypted files will be saved.</param>
         private async Task PerformEncryptionAsync(string password, string outputFolder)
         {
-            ProgressVisibility = Visibility.Visible;
             ProgressValue = 0;
-            var progress = new Progress<double>(value => ProgressValue = value * 100);
+            var progress = new Progress<double>(value =>
+            {
+                ProgressValue = value;
+                OnPropertyChanged(nameof(ProgressValue));
+            });
 
             try
             {
@@ -404,10 +454,6 @@ namespace HoudiniSafe.ViewModel
             catch (Exception ex)
             {
                 _dialogService.ShowPopup($"Fehler bei der Verschlüsselung: {ex.Message}", "Fehler");
-            }
-            finally
-            {
-                ProgressVisibility = Visibility.Collapsed;
             }
         }
 
@@ -437,10 +483,28 @@ namespace HoudiniSafe.ViewModel
             }
         }
 
+
+        private async Task DecryptAsync()
+        {
+            ProgressMessage = "Entschlüssele Datei...";
+            ProgressVisibility = Visibility.Visible;
+
+            if (ActiveTab == TabType.Local)
+            {
+                await DecryptLocalAsync();
+            }
+            else if (ActiveTab == TabType.Cloud)
+            {
+                await DecryptCloudAsync();
+            }
+
+            ProgressVisibility = Visibility.Collapsed;
+        }
+
         /// <summary>
         /// Starts the decryption process asynchronously.
         /// </summary>
-        private async Task DecryptAsync()
+        private async Task DecryptLocalAsync()
         {
             if (!CanDecryptFiles()) return;
 
@@ -451,6 +515,86 @@ namespace HoudiniSafe.ViewModel
             if (string.IsNullOrEmpty(outputFolder)) return;
 
             await PerformDecryptionAsync(password, outputFolder);
+        }
+
+        private async Task DecryptCloudAsync()
+        {
+            if (!CanDecrypt) return;
+
+            string password = ShowPasswordDialog("Passwort für Entschlüsselung eingeben");
+            if (string.IsNullOrEmpty(password)) return;
+
+            string outputFolder = GetOutputFolderPath();
+            if (string.IsNullOrEmpty(outputFolder)) return;
+
+            ProgressVisibility = Visibility.Visible;
+            ProgressValue = 0;
+            var progress = new Progress<double>(value => ProgressValue = value * 100);
+
+            string tempFilePath = null;
+            string decryptedFilePath = null;
+
+            try
+            {
+                // Download the file from cloud
+                tempFilePath = await _googleDriveFileService.DownloadFileAsync(SelectedCloudItem.Id);
+
+                // Decrypt the file
+                decryptedFilePath = Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(SelectedCloudItem.Name));
+                await _encryptionService.DecryptFileAsync(tempFilePath, outputFolder, password, progress, false);
+
+                //if (ReplaceOriginal)
+                //{
+                //    // Upload decrypted file back to cloud
+                //    await _googleDriveFileService.UploadFileAsync(decryptedFilePath);
+
+                //    // Delete the encrypted file from cloud
+                //    await _googleDriveFileService.DeleteFileAsync(SelectedCloudItem.Id);
+
+                //    _dialogService.ShowPopup("Datei erfolgreich entschlüsselt und in der Cloud ersetzt.", "Erfolg", "DecryptIcon");
+                //}
+                //else
+                //{
+                //    _dialogService.ShowPopup($"Datei erfolgreich entschlüsselt und gespeichert in: {outputFolder}", "Erfolg", "DecryptIcon");
+                //}
+
+                // Refresh the cloud files list
+                await LoadCloudFilesAsync();
+            }
+            catch (Exception ex)
+            {
+                _dialogService.ShowPopup($"Fehler bei der Entschlüsselung: {ex.Message}", "Fehler");
+            }
+            finally
+            {
+                ProgressVisibility = Visibility.Collapsed;
+
+                // Delete the temporary downloaded encrypted file
+                if (tempFilePath != null && File.Exists(tempFilePath))
+                {
+                    try
+                    {
+                        File.Delete(tempFilePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error deleting temporary file: {ex.Message}");
+                    }
+                }
+
+                // If replacing original, delete the local decrypted file
+                if (ReplaceOriginal && decryptedFilePath != null && File.Exists(decryptedFilePath))
+                {
+                    try
+                    {
+                        File.Delete(decryptedFilePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error deleting decrypted file: {ex.Message}");
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -500,20 +644,26 @@ namespace HoudiniSafe.ViewModel
 
         private async Task LoadCloudFilesAsync()
         {
-            if (!SettingsViewModel.IsGoogleDriveConnected)
-            {
-                CloudFiles.Clear();
-                return;
-            }
+            //if (!SettingsViewModel.IsGoogleDriveConnected)
+            //{
+            //    CloudFiles.Clear();
+            //    return;
+            //}
 
-            try
+            //try
+            //{
+            //    var cloudItems = await _googleDriveFileService.GetFolderContentsAsync();
+            //    UpdateCloudFiles(cloudItems);
+            //}
+            //catch (Exception ex)
+            //{
+            //    _dialogService.ShowPopup($"Fehler beim Laden der Cloud-Dateien: {ex.Message}", "Fehler");
+            //}
+            var cloudItems = await _googleDriveFileService.GetFolderContentsAsync();
+            CloudFiles.Clear();
+            foreach (var item in cloudItems)
             {
-                var cloudItems = await _googleDriveFileService.GetFolderContentsAsync();
-                UpdateCloudFiles(cloudItems);
-            }
-            catch (Exception ex)
-            {
-                _dialogService.ShowPopup($"Fehler beim Laden der Cloud-Dateien: {ex.Message}", "Fehler");
+                CloudFiles.Add(item);
             }
         }
 
@@ -553,6 +703,41 @@ namespace HoudiniSafe.ViewModel
             });
         }
 
+        private async Task PerformCloudDecryptionAsync(string password, string outputFolder)
+        {
+            ProgressVisibility = Visibility.Visible;
+            ProgressValue = 0;
+            var progress = new Progress<double>(value => ProgressValue = value * 100);
+
+            try
+            {
+                // Download the file from cloud
+                var tempFilePath = await _googleDriveFileService.DownloadFileAsync(SelectedCloudItem.Id);
+
+                // Decrypt the file
+                await _encryptionService.DecryptFileAsync(tempFilePath, outputFolder, password, progress, ReplaceOriginal);
+
+                _dialogService.ShowPopup("Entschlüsselung erfolgreich abgeschlossen.", "Erfolg", "DecryptIcon");
+
+                // Optionally delete the encrypted file from cloud if ReplaceOriginal is true
+                //if (ReplaceOriginal)
+                //{
+                //    await _googleDriveFileService.DeleteFileAsync(SelectedCloudItem.Id);
+                //}
+
+                // Refresh the cloud files list
+                await LoadCloudFilesAsync();
+            }
+            catch (Exception ex)
+            {
+                _dialogService.ShowPopup($"Fehler bei der Entschlüsselung: {ex.Message}", "Fehler");
+            }
+            finally
+            {
+                ProgressVisibility = Visibility.Collapsed;
+            }
+        }
+
         private async Task NavigateToFolderAsync(CloudItem folder)
         {
             if (folder != null && folder.IsFolder)
@@ -565,31 +750,54 @@ namespace HoudiniSafe.ViewModel
 
         #region Helper Methods
 
+        private void UpdateActiveTab(TabType newActiveTab)
+        {
+            ActiveTab = newActiveTab;
+            OnPropertyChanged(nameof(CanDecrypt));
+        }
+
         /// <summary>
         /// Gets the output folder path based on the ReplaceOriginal property.
         /// </summary>
         /// <returns>The path where the file will be saved.</returns>
         private string GetOutputFolderPath()
         {
-            if (ReplaceOriginal)
+            if (ActiveTab == TabType.Local)
             {
-                // If replacing original, use the directory of the first file
-                return Path.GetDirectoryName(DroppedFiles[0]);
-            }
-            else
-            {
-                switch (ActiveTab) 
+                if (DroppedFiles.Count == 0)
                 {
-                    case TabType.Local:
-                        return GetSaveFolderPath();
+                    throw new InvalidOperationException("Keine Datei zum Entschlüsseln ausgewählt.");
+                }
 
-                    case TabType.Cloud: 
-                        return Path.GetDirectoryName(DroppedFiles[0]);
-
-                    default:
-                        return "";
+                if (ReplaceOriginal)
+                {
+                    return Path.GetDirectoryName(DroppedFiles[0]);
+                }
+                else
+                {
+                    return GetSaveFolderPath();
                 }
             }
+            else if (ActiveTab == TabType.Cloud)
+            {
+                if (SelectedCloudItem == null)
+                {
+                    throw new InvalidOperationException("Keine Cloud-Datei zum Entschlüsseln ausgewählt.");
+                }
+
+                if (ReplaceOriginal)
+                {
+                    // Wenn wir die Originaldatei in der Cloud ersetzen, 
+                    // müssen wir einen temporären lokalen Ordner für die entschlüsselte Datei verwenden
+                    return Path.Combine(Path.GetTempPath(), "HoudiniSafeDecrypted");
+                }
+                else
+                {
+                    return GetSaveFolderPath();
+                }
+            }
+
+            throw new InvalidOperationException("Ungültiger aktiver Tab.");
         }
 
         private async Task UpdateCloudFilesVisibilityAsync()
@@ -606,14 +814,22 @@ namespace HoudiniSafe.ViewModel
 
         private async Task UploadToCloudAsync(string folderPath)
         {
-            string fileToDelete = "";
             try
             {
                 var files = Directory.GetFiles(folderPath, "*.enc");
-                foreach (var file in files)
+                for (int i = 0; i < files.Length; i++)
                 {
-                    fileToDelete = Path.Combine(folderPath, file);
-                    await _googleDriveFileService.UploadFileAsync(file);
+                    var file = files[i];
+                    ProgressMessage = $"Lade Datei {i + 1} von {files.Length} hoch...";
+                    ProgressValue = 0;
+                    var progress = new Progress<double>(value =>
+                    {
+                        ProgressValue = value;
+                        OnPropertyChanged(nameof(ProgressValue));
+                    });
+
+                    await _googleDriveFileService.UploadFileAsync(file, progress);
+                    File.Delete(file);
                 }
                 _dialogService.ShowPopup("Dateien erfolgreich in die Cloud hochgeladen.", "Erfolg");
             }
@@ -621,10 +837,9 @@ namespace HoudiniSafe.ViewModel
             {
                 _dialogService.ShowPopup($"Fehler beim Hochladen in die Cloud: {ex.Message}", "Fehler");
             }
-            finally 
+            finally
             {
                 await ReLoadFolder();
-                File.Delete(fileToDelete);
             }
         }
 

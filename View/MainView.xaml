@@ -9,8 +9,8 @@
         xmlns:userControl="clr-namespace:HoudiniSafe.View.UserControls"
         mc:Ignorable="d"
         Title="HoudiniSafe"
-        Height="420"
-        MinHeight="420"
+        Height="440"
+        MinHeight="440"
         Width="600"
         MinWidth="600"
         Style="{StaticResource ModernWindowStyle}"
@@ -96,13 +96,19 @@
         <!-- Progress Bar Section -->
         <StackPanel Grid.Row="2"
                     Margin="5">
-            <ProgressBar 
-                Height="10"
-                Margin="20,0"
-                Value="{Binding ProgressValue}"
-                Visibility="{Binding ProgressVisibility}"/>
+            <StackPanel Visibility="{Binding ProgressVisibility}">
+                <TextBlock Text="{Binding ProgressMessage}" 
+                   HorizontalAlignment="Center" 
+                   Margin="0,0,0,5"/>
+                <ProgressBar Value="{Binding ProgressValue}" 
+                     Minimum="0" 
+                     Maximum="100" 
+                     Width="200"
+                     Style="{StaticResource ThemedProgressBarStyle}"/>
+            </StackPanel>
+            
             <StackPanel Orientation="Horizontal"
-                        HorizontalAlignment="Right"
+                        HorizontalAlignment="Center"
                         Margin="20,10,20,20">
                 <Button Content="Öffnen"
                         Command="{Binding OpenFileCommand}"

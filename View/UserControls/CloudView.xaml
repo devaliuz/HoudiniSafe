@@ -32,13 +32,13 @@
                 <!-- TreeView with dynamic height -->
                 <TreeView Grid.Row="1"
                           ItemsSource="{Binding CloudFiles}"
-                          SelectedItemChanged="TreeView_SelectedItemChanged" 
+                          SelectedItemChanged="TreeView_SelectedItemChanged"
                           Style="{StaticResource ModernTreeViewStyle}"
                           Margin="10"
                           services:DragAndDropService.DropCommand="{Binding DropCommand}"
                           AllowDrop="True">
                     <TreeView.ItemTemplate>
-                        <HierarchicalDataTemplate ItemsSource="{Binding Items}">
+                        <HierarchicalDataTemplate ItemsSource="{Binding Children}">
                             <StackPanel Orientation="Horizontal">
 
                                 <TextBlock Text="{Binding Name}"

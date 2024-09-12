@@ -157,7 +157,7 @@ public class GoogleDriveFileService : IFileService
         }
     }
 
-    public async Task<bool> UploadFileAsync(string filePath)
+    public async Task<bool> UploadFileAsync(string filePath, IProgress<double> progress)
     {
         if (!_isInitialized)
         {
@@ -185,6 +185,25 @@ public class GoogleDriveFileService : IFileService
             {
                 request = _driveService.Files.Create(fileMetadata, stream, "application/octet-stream");
                 request.Fields = "id";
+
+                request.ProgressChanged += (IUploadProgress uploadProgress) =>
+                {
+                    switch (uploadProgress.Status)
+                    {
+                        case UploadStatus.Uploading:
+                            {
+                                double percentComplete = (double)uploadProgress.BytesSent / stream.Length * 100;
+                                progress.Report(percentComplete);
+                                break;
+                            }
+                        case UploadStatus.Failed:
+                            {
+                                Console.WriteLine($"Upload failed: {uploadProgress.Exception?.Message}");
+                                break;
+                            }
+                    }
+                };
+
                 var result = await request.UploadAsync();
 
                 if (result.Status == UploadStatus.Failed)
@@ -203,5 +222,43 @@ public class GoogleDriveFileService : IFileService
             Console.WriteLine($"Stack trace: {ex.StackTrace}");
             return false;
         }
+    }
+
+    public async Task<string> DownloadFileAsync(string fileId)
+    {
+        try
+        {
+            var request = _driveService.Files.Get(fileId);
+            var file = await request.ExecuteAsync();
+
+            if (file == null)
+            {
+                throw new Exception($"File with ID {fileId} not found.");
+            }
+
+            string tempFilePath = Path.Combine(Path.GetTempPath(), file.Name);
+
+            using (var memoryStream = new MemoryStream())
+            {
+                var downloadRequest = _driveService.Files.Get(fileId);
+                await downloadRequest.DownloadAsync(memoryStream);
+
+                memoryStream.Position = 0;
+
+                using (var fileStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write))
+                {
+                    await memoryStream.CopyToAsync(fileStream);
+                }
+            }
+
+            Console.WriteLine($"File downloaded successfully: {tempFilePath}");
+            return tempFilePath;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred while downloading the file: {ex.Message}");
+            throw;
+        }
+
     }
 }
