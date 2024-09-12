@@ -1,31 +1,41 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- Modernes Farbschema -->
-    <Color x:Key="PrimaryBackgroundColor">#121212</Color>
-    <Color x:Key="SecondaryBackgroundColor">#1E1E1E</Color>
-    <Color x:Key="PrimaryTextColor">#FFFFFF</Color>
-    <Color x:Key="SecondaryTextColor">#B3B3B3</Color>
+    <!-- Accent Colors (shared between light and dark modes) -->
     <Color x:Key="AccentColor">#FF4136</Color>
     <Color x:Key="AccentColorLight">#FF725E</Color>
 
+    <!-- Dark Theme Colors (as provided) -->
+    <Color x:Key="PrimaryBackgroundColor_Dark">#121212</Color>
+    <Color x:Key="SecondaryBackgroundColor_Dark">#1E1E1E</Color>
+    <Color x:Key="PrimaryTextColor_Dark">#FFFFFF</Color>
+    <Color x:Key="SecondaryTextColor_Dark">#B3B3B3</Color>
+
+    <!-- Light Theme Colors (complementary to dark theme) -->
+    <Color x:Key="PrimaryBackgroundColor_Light">#FFFFFF</Color>
+    <Color x:Key="SecondaryBackgroundColor_Light">#F0F0F0</Color>
+    <Color x:Key="PrimaryTextColor_Light">#000000</Color>
+    <Color x:Key="SecondaryTextColor_Light">#666666</Color>
+
     <!-- Brushes -->
-    <SolidColorBrush x:Key="PrimaryBackgroundBrush" Color="{StaticResource PrimaryBackgroundColor}"/>
-    <SolidColorBrush x:Key="SecondaryBackgroundBrush" Color="{StaticResource SecondaryBackgroundColor}"/>
-    <SolidColorBrush x:Key="PrimaryTextBrush" Color="{StaticResource PrimaryTextColor}"/>
-    <SolidColorBrush x:Key="SecondaryTextBrush" Color="{StaticResource SecondaryTextColor}"/>
+    <!-- Accent Brushes -->
     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
     <SolidColorBrush x:Key="AccentBrushLight" Color="{StaticResource AccentColorLight}"/>
 
-    <!-- New ProgressBar colors -->
-    <Color x:Key="ProgressBarBackgroundColor_Light">#E0E0E0</Color>
-    <Color x:Key="ProgressBarForegroundColor_Light">#1E88E5</Color>
-    <Color x:Key="ProgressBarBackgroundColor_Dark">#424242</Color>
-    <Color x:Key="ProgressBarForegroundColor_Dark">#64B5F6</Color>
+    <!-- Dark Theme Brushes -->
+    <SolidColorBrush x:Key="PrimaryBackgroundBrush_Dark" Color="{StaticResource PrimaryBackgroundColor_Dark}"/>
+    <SolidColorBrush x:Key="SecondaryBackgroundBrush_Dark" Color="{StaticResource SecondaryBackgroundColor_Dark}"/>
+    <SolidColorBrush x:Key="PrimaryTextBrush_Dark" Color="{StaticResource PrimaryTextColor_Dark}"/>
+    <SolidColorBrush x:Key="SecondaryTextBrush_Dark" Color="{StaticResource SecondaryTextColor_Dark}"/>
 
-    <!-- New ProgressBar Brushes -->
-    <SolidColorBrush x:Key="ProgressBarBackgroundBrush_Light" Color="{StaticResource ProgressBarBackgroundColor_Light}"/>
-    <SolidColorBrush x:Key="ProgressBarForegroundBrush_Light" Color="{StaticResource ProgressBarForegroundColor_Light}"/>
-    <SolidColorBrush x:Key="ProgressBarBackgroundBrush_Dark" Color="{StaticResource ProgressBarBackgroundColor_Dark}"/>
-    <SolidColorBrush x:Key="ProgressBarForegroundBrush_Dark" Color="{StaticResource ProgressBarForegroundColor_Dark}"/>
+    <!-- Light Theme Brushes -->
+    <SolidColorBrush x:Key="PrimaryBackgroundBrush_Light" Color="{StaticResource PrimaryBackgroundColor_Light}"/>
+    <SolidColorBrush x:Key="SecondaryBackgroundBrush_Light" Color="{StaticResource SecondaryBackgroundColor_Light}"/>
+    <SolidColorBrush x:Key="PrimaryTextBrush_Light" Color="{StaticResource PrimaryTextColor_Light}"/>
+    <SolidColorBrush x:Key="SecondaryTextBrush_Light" Color="{StaticResource SecondaryTextColor_Light}"/>
 
+    <!-- Dynamic theme brushes (will be switched in code) -->
+    <SolidColorBrush x:Key="PrimaryBackgroundBrush" Color="{StaticResource PrimaryBackgroundColor_Dark}"/>
+    <SolidColorBrush x:Key="SecondaryBackgroundBrush" Color="{StaticResource SecondaryBackgroundColor_Dark}"/>
+    <SolidColorBrush x:Key="PrimaryTextBrush" Color="{StaticResource PrimaryTextColor_Dark}"/>
+    <SolidColorBrush x:Key="SecondaryTextBrush" Color="{StaticResource SecondaryTextColor_Dark}"/>
 </ResourceDictionary>

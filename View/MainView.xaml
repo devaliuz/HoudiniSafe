@@ -104,7 +104,7 @@
                      Minimum="0" 
                      Maximum="100" 
                      Width="200"
-                     Style="{StaticResource ThemedProgressBarStyle}"/>
+                     Style="{StaticResource ProgressBarStyle}"/>
             </StackPanel>
             
             <StackPanel Orientation="Horizontal"
