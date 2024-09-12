@@ -2,9 +2,9 @@
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Drive.v3;
 using System.IO;
+using System.Text.Json;
 using HoudiniSafe.ViewModel.Commands;
 using HoudiniSafe.Services;
-using Google.Apis.Services;
 
 namespace HoudiniSafe.ViewModel
 {
@@ -13,8 +13,8 @@ namespace HoudiniSafe.ViewModel
         private readonly GoogleAuthenticator _googleAuthenticator;
 
         public const string HoudiniFolderName = "Houdini";
+        private const string ConnectionStatusFile = "connection_status.json";
         public string _houdiniFolderId;
-
 
         private bool _isDarkMode;
         public bool IsDarkMode
@@ -39,10 +39,11 @@ namespace HoudiniSafe.ViewModel
 
         public ICommand ConnectToGoogleDriveCommand { get; }
         public ICommand DisconnectFromGoogleDriveCommand { get; }
+        public ICommand DeleteCredentialsCommand { get; }
 
         private DriveService _driveService;
 
-        public GoogleAuthenticator GoogleAuthenticator { get ; }
+        public GoogleAuthenticator GoogleAuthenticator { get; }
         public GoogleDriveFileService GoogleDriveFileService { get; set; }
 
         public SettingsViewModel()
@@ -50,9 +51,10 @@ namespace HoudiniSafe.ViewModel
             GoogleAuthenticator = GoogleAuthenticator.Instance;
             ConnectToGoogleDriveCommand = new AsyncRelayCommand(ConnectToGoogleDrive);
             DisconnectFromGoogleDriveCommand = new RelayCommand(DisconnectFromGoogleDrive);
+            DeleteCredentialsCommand = new RelayCommand(DeleteCredentials);
 
+            LoadConnectionStatus();
         }
-
 
         private async Task ConnectToGoogleDrive()
         {
@@ -62,7 +64,6 @@ namespace HoudiniSafe.ViewModel
                 _driveService = GoogleAuthenticator.CreateDriveService(credential);
                 IsGoogleDriveConnected = true;
 
-                // Hole die tatsächliche E-Mail-Adresse des Benutzers
                 var aboutRequest = _driveService.About.Get();
                 aboutRequest.Fields = "user";
                 var about = await aboutRequest.ExecuteAsync();
@@ -71,6 +72,7 @@ namespace HoudiniSafe.ViewModel
 
                 GoogleDriveConnectionStatus = $"Verbunden als : {displayName}\n{userEmail}";
                 await EnsureHoudiniFolderExistsAsync();
+                SaveConnectionStatus();
             }
             catch (Exception ex)
             {
@@ -85,9 +87,6 @@ namespace HoudiniSafe.ViewModel
             GoogleDriveFileService = GoogleDriveFileService.Instance;
         }
 
-        /// <summary>
-        /// Ensures that the "Houdini" folder exists in Google Drive, creating it if necessary.
-        /// </summary>
         private async Task EnsureHoudiniFolderExistsAsync()
         {
             var folderListRequest = _driveService.Files.List();
@@ -116,17 +115,86 @@ namespace HoudiniSafe.ViewModel
             }
         }
 
-        private void DisconnectFromGoogleDrive()
+        public void DisconnectFromGoogleDrive()
         {
             _driveService = null;
             IsGoogleDriveConnected = false;
             GoogleDriveConnectionStatus = "Nicht verbunden";
 
-            // Remove stored credentials
             if (File.Exists("token.json"))
             {
                 File.Delete("token.json");
             }
+
+            SaveConnectionStatus();
+        }
+
+        private void DeleteCredentials()
+        {
+            if (File.Exists("token.json"))
+            {
+                File.Delete("token.json");
+            }
+            GoogleDriveConnectionStatus = "Anmeldedaten gelöscht";
+        }
+
+        private void SaveConnectionStatus()
+        {
+            var status = new ConnectionStatus
+            {
+                IsConnected = IsGoogleDriveConnected,
+                ConnectionStatusMessage = GoogleDriveConnectionStatus
+            };
+
+            string jsonString = JsonSerializer.Serialize(status);
+            File.WriteAllText(ConnectionStatusFile, jsonString);
+        }
+
+        private void LoadConnectionStatus()
+        {
+            if (File.Exists(ConnectionStatusFile))
+            {
+                string jsonString = File.ReadAllText(ConnectionStatusFile);
+                var status = JsonSerializer.Deserialize<ConnectionStatus>(jsonString);
+
+                if (status != null)
+                {
+                    IsGoogleDriveConnected = status.IsConnected;
+                    GoogleDriveConnectionStatus = status.ConnectionStatusMessage;
+
+                    if (IsGoogleDriveConnected)
+                    {
+                        InitializeDriveService();
+                    }
+                }
+            }
+        }
+
+        public async Task<bool> RestoreLastConnectionAsync()
+        {
+            LoadConnectionStatus();
+            if (IsGoogleDriveConnected)
+            {
+                try
+                {
+                    await ConnectToGoogleDrive();
+                    return true;
+                }
+                catch
+                {
+                    IsGoogleDriveConnected = false;
+                    GoogleDriveConnectionStatus = "Verbindung fehlgeschlagen";
+                    SaveConnectionStatus();
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        private class ConnectionStatus
+        {
+            public bool IsConnected { get; set; }
+            public string ConnectionStatusMessage { get; set; }
         }
     }
 }

@@ -238,6 +238,8 @@ namespace HoudiniSafe.ViewModel
         /// </summary>
         public ICommand NavigateToFolderCommand { get; }
 
+        public ICommand RestoreLastConnectionCommand { get; }
+
         #endregion
 
         #region Constructor
@@ -267,6 +269,7 @@ namespace HoudiniSafe.ViewModel
             //DecryptCommand = new AsyncRelayCommand(DecryptAsync);
             OpenSettingsCommand = new RelayCommand(OpenSettings);
             NavigateToFolderCommand = new AsyncRelayCommand<CloudItem>(NavigateToFolderAsync);
+            RestoreLastConnectionCommand = new AsyncRelayCommand(RestoreLastConnectionAsync);
 
             // Load cloud files
             SettingsViewModel.PropertyChanged += async (sender, e) =>
@@ -882,6 +885,36 @@ namespace HoudiniSafe.ViewModel
             return dialog.ShowDialog() == true ? viewModel.Password : null;
         }
 
+        private async Task RestoreLastConnectionAsync()
+        {
+            try
+            {
+                bool isConnected = await SettingsViewModel.RestoreLastConnectionAsync();
+                if (isConnected)
+                {
+                    await LoadCloudFilesAsync();
+                    _dialogService.ShowPopup("Verbindung wiederhergestellt", "Erfolg");
+                }
+                else
+                {
+                    _dialogService.ShowPopup("Keine gespeicherte Verbindung gefunden", "Information");
+                }
+            }
+            catch (Exception ex)
+            {
+                _dialogService.ShowPopup($"Fehler bei der Wiederherstellung der Verbindung: {ex.Message}", "Fehler");
+            }
+        }
+
+        private void OnApplicationExit(object sender, ExitEventArgs e)
+        {
+            DisconnectFromCloud();
+        }
+
+        private void DisconnectFromCloud()
+        {
+            SettingsViewModel.DisconnectFromGoogleDrive();
+        }
         #endregion
     }
 }
