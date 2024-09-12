@@ -25,7 +25,11 @@
                         Background="Transparent"
                         ItemContainerStyle="{StaticResource TabControlStyle}">
             <TabItem Header="Allgemeines">
-
+                <TextBox Background="Transparent"
+                         Text="Noch nicht implementiert"
+                         Foreground="{DynamicResource AccentBrush}"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center"/>
             </TabItem>
             <TabItem>
                 <TabItem.Header>
@@ -41,12 +45,59 @@
                 </TabItem.Header>
                 <local:GoogleDriveSettings DataContext="{Binding}"/>
             </TabItem>
-            <!--<TabItem Header="OneDrive">
-                    <local:OneDriveSettings/>
-                </TabItem>
-                <TabItem Header="Anderer Clouddienst">
-                    <local:OtherCloudSettings/>
-                </TabItem>-->
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="MS OneDrive"
+                                   VerticalAlignment="Center"/>
+                        <Image Source="{StaticResource OneDriveIcon}"
+                               VerticalAlignment="Center"
+                               Height="24"
+                               Stretch="Uniform"
+                               Margin="0,0,5,0"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <!--<local:GoogleDriveSettings DataContext="{Binding}"/>-->
+                <TextBox Background="Transparent"
+                         Text="Noch nicht implementiert"
+                         Foreground="{DynamicResource AccentBrush}"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center"/>
+            </TabItem>
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Dropbox"
+                                   VerticalAlignment="Center"/>
+                        <Image Source="{StaticResource DropBoxIcon}"
+                               VerticalAlignment="Center"
+                               Height="24"
+                               Stretch="Uniform"
+                               Margin="0,0,5,0"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <!--<local:GoogleDriveSettings DataContext="{Binding}"/>-->
+                <TextBox Background="Transparent"
+                         Text="Noch nicht implementiert"
+                         Foreground="{DynamicResource AccentBrush}"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center"/>
+            </TabItem>
+            <!--<TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Andere Cloud"
+                                   VerticalAlignment="Center"/>
+                        <Image Source="{StaticResource GoogleDriveIcon}"
+                               VerticalAlignment="Center"
+                               Height="24"
+                               Stretch="Uniform"
+                               Margin="0,0,5,0"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <local:GoogleDriveSettings DataContext="{Binding}"/>
+            </TabItem>-->
+
         </TabControl>
         <Button Grid.Row="2"
                 Content="Schließen"

@@ -33,6 +33,8 @@
             <BitmapImage x:Key="FileIcon" UriSource="pack://application:,,,/Ressources/Icons/file.png"/>
             <BitmapImage x:Key="FolderIcon" UriSource="pack://application:,,,/Ressources/Icons/folder.png"/>
             <BitmapImage x:Key="GoogleDriveIcon" UriSource="pack://application:,,,/Ressources/Icons/GoogleDriveIcon.png"/>
+            <BitmapImage x:Key="OneDriveIcon" UriSource="pack://application:,,,/Ressources/Icons/OneDriveIcon.png"/>
+            <BitmapImage x:Key="DropBoxIcon" UriSource="pack://application:,,,/Ressources/Icons/DropBoxIcon.png"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

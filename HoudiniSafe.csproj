@@ -12,15 +12,21 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Ressources\Icons\DropBoxIcon.png" />
     <None Remove="Ressources\Icons\file.png" />
     <None Remove="Ressources\Icons\folder.png" />
     <None Remove="Ressources\Icons\GoogleDriveIcon.png" />
+    <None Remove="Ressources\Icons\ico_or.ico" />
     <None Remove="Ressources\Icons\locked.png" />
+    <None Remove="Ressources\Icons\OneDriveIcon.png" />
     <None Remove="Ressources\Icons\open.ico" />
     <None Remove="Ressources\Icons\open.png" />
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="Ressources\Icons\DropBoxIcon.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Ressources\Icons\file.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
@@ -30,10 +36,16 @@
     <Resource Include="Ressources\Icons\GoogleDriveIcon.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Ressources\Icons\ico_or.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
   </ItemGroup>
 
   <ItemGroup>
     <Resource Include="Ressources\Icons\locked.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Ressources\Icons\OneDriveIcon.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Ressources\Icons\open.png">
